@@ -1,0 +1,413 @@
+{
+  "name": "Trading company",
+  "api_name": "trading_company",
+  "version": "1",
+  "description": "The commercial and accounting model of a packaging wholesaler: who it deals with, what it sells and in which carton, and where each invoice line is booked. Built from the tables of the project; every object type is bound to the dataset that holds its rows.",
+  "object_types": [
+    {
+      "api_name": "contact",
+      "display_name": "Contact",
+      "description": "A company or a person the business deals with, one row per contact. `contact_type` says in which capacity; its values are the subtypes.",
+      "primary_key": "contact_id",
+      "properties": {
+        "contact_id": {
+          "data_type": "string",
+          "required": true,
+          "description": "Internal identifier, e.g. C-00412."
+        },
+        "name": {
+          "data_type": "string",
+          "required": true
+        },
+        "contact_type": {
+          "data_type": "string",
+          "required": true,
+          "description": "Values as stored: CLIENT, FOURNISSEUR, PROSPECT, TRANSPORTEUR. Subtypes: client, fournisseur, prospect, transporteur."
+        },
+        "country": {
+          "data_type": "string",
+          "description": "ISO 3166 alpha-2 code. Values: FR, BE, DE, ES, IT."
+        },
+        "created_at": {
+          "data_type": "timestamp"
+        }
+      },
+      "subtypes": [
+        "client",
+        "fournisseur",
+        "prospect",
+        "transporteur"
+      ],
+      "dataset_id": "res.dataset.REPLACE-contacts"
+    },
+    {
+      "api_name": "carton_format",
+      "display_name": "Carton format",
+      "description": "A reference table: the carton formats products are packed in, one row per format, with its inner dimensions and maximum load.",
+      "primary_key": "format_code",
+      "properties": {
+        "format_code": {
+          "data_type": "string",
+          "required": true,
+          "description": "Values: C10, C20, C30, C40, PAL80, PAL120."
+        },
+        "label": {
+          "data_type": "string"
+        },
+        "length_mm": {
+          "data_type": "integer"
+        },
+        "width_mm": {
+          "data_type": "integer"
+        },
+        "height_mm": {
+          "data_type": "integer"
+        },
+        "max_weight_kg": {
+          "data_type": "double"
+        }
+      },
+      "dataset_id": "res.dataset.REPLACE-carton-formats"
+    },
+    {
+      "api_name": "product",
+      "display_name": "Product",
+      "description": "An article of the catalogue, one row per SKU, packed in one carton format.",
+      "primary_key": "sku",
+      "properties": {
+        "sku": {
+          "data_type": "string",
+          "required": true
+        },
+        "label": {
+          "data_type": "string",
+          "required": true
+        },
+        "format_code": {
+          "data_type": "string",
+          "description": "The carton format the product ships in: a `carton_format.format_code`."
+        },
+        "unit_price": {
+          "data_type": "double",
+          "description": "Euros, excluding tax."
+        },
+        "active": {
+          "data_type": "boolean"
+        }
+      },
+      "dataset_id": "res.dataset.REPLACE-products"
+    },
+    {
+      "api_name": "account",
+      "display_name": "Ledger account",
+      "description": "An account of the chart of accounts (plan comptable), one row per account. Accounts form a tree through `parent_number`; `account_class` is the first digit.",
+      "primary_key": "account_number",
+      "properties": {
+        "account_number": {
+          "data_type": "string",
+          "required": true,
+          "description": "E.g. 607100. Kept as text: leading digits matter."
+        },
+        "label": {
+          "data_type": "string",
+          "required": true
+        },
+        "account_class": {
+          "data_type": "string",
+          "description": "Values: 1 (capital), 2 (fixed assets), 3 (stock), 4 (third parties), 5 (financial), 6 (expenses), 7 (income)."
+        },
+        "parent_number": {
+          "data_type": "string",
+          "description": "The `account_number` of the parent account; null at the root."
+        }
+      },
+      "subtypes": [
+        "capital_account",
+        "fixed_asset_account",
+        "stock_account",
+        "third_party_account",
+        "financial_account",
+        "expense_account",
+        "income_account"
+      ],
+      "dataset_id": "res.dataset.REPLACE-accounts"
+    },
+    {
+      "api_name": "invoice_line",
+      "display_name": "Invoice line",
+      "description": "One line of a sales or purchase invoice: a product, a quantity, an amount, the contact invoiced and the account it is booked on.",
+      "primary_key": "line_id",
+      "properties": {
+        "line_id": {
+          "data_type": "long",
+          "required": true
+        },
+        "invoice_number": {
+          "data_type": "string",
+          "required": true
+        },
+        "invoice_date": {
+          "data_type": "date",
+          "required": true
+        },
+        "direction": {
+          "data_type": "string",
+          "description": "Values: SALE, PURCHASE."
+        },
+        "contact_id": {
+          "data_type": "string",
+          "required": true
+        },
+        "sku": {
+          "data_type": "string"
+        },
+        "account_number": {
+          "data_type": "string",
+          "required": true
+        },
+        "quantity": {
+          "data_type": "double"
+        },
+        "amount": {
+          "data_type": "double",
+          "description": "Euros, excluding tax."
+        }
+      },
+      "dataset_id": "res.dataset.REPLACE-invoice-lines"
+    }
+  ],
+  "link_types": [
+    {
+      "api_name": "contact_invoice_lines",
+      "display_name": "is invoiced",
+      "description": "The invoice lines of a contact. `invoice_line.contact_id` holds the contact's `contact_id`.",
+      "source_object_type": "contact",
+      "target_object_type": "invoice_line",
+      "cardinality": "ONE_TO_MANY",
+      "foreign_key_property": "contact_id"
+    },
+    {
+      "api_name": "product_invoice_lines",
+      "display_name": "is sold in",
+      "description": "The invoice lines a product appears on.",
+      "source_object_type": "product",
+      "target_object_type": "invoice_line",
+      "cardinality": "ONE_TO_MANY",
+      "foreign_key_property": "sku"
+    },
+    {
+      "api_name": "carton_format_products",
+      "display_name": "packs",
+      "description": "The products shipped in a carton format.",
+      "source_object_type": "carton_format",
+      "target_object_type": "product",
+      "cardinality": "ONE_TO_MANY",
+      "foreign_key_property": "format_code"
+    },
+    {
+      "api_name": "account_invoice_lines",
+      "display_name": "books",
+      "description": "The invoice lines booked on an account.",
+      "source_object_type": "account",
+      "target_object_type": "invoice_line",
+      "cardinality": "ONE_TO_MANY",
+      "foreign_key_property": "account_number"
+    },
+    {
+      "api_name": "account_children",
+      "display_name": "has sub-account",
+      "description": "The accounts directly under an account in the chart: `account.parent_number` holds the parent's `account_number`.",
+      "source_object_type": "account",
+      "target_object_type": "account",
+      "cardinality": "ONE_TO_MANY",
+      "foreign_key_property": "parent_number"
+    }
+  ],
+  "action_types": [
+    {
+      "api_name": "convert_prospect",
+      "display_name": "Convert a prospect into a client",
+      "description": "Turns a prospect into a client once a first order is signed.",
+      "parameters": {
+        "contact": {
+          "data_type": {
+            "type": "ontology_object",
+            "object_type_api_name": "contact"
+          },
+          "required": true,
+          "description": "The prospect to convert."
+        }
+      },
+      "rules": [
+        {
+          "parameter": "contact",
+          "property": "contact_type",
+          "operator": "equals",
+          "value": "PROSPECT",
+          "message": "Only a prospect can be converted into a client."
+        }
+      ],
+      "scope": "contacts:convert",
+      "operations": [
+        {
+          "type": "modify_object",
+          "target_object_parameter": "contact",
+          "property_modifications": {
+            "contact_type": {
+              "type": "static_value",
+              "value": "CLIENT"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "api_name": "deactivate_product",
+      "display_name": "Withdraw a product from the catalogue",
+      "description": "Marks a product as no longer sold. The product and its invoice lines are kept.",
+      "parameters": {
+        "product": {
+          "data_type": {
+            "type": "ontology_object",
+            "object_type_api_name": "product"
+          },
+          "required": true
+        }
+      },
+      "rules": [
+        {
+          "parameter": "product",
+          "property": "active",
+          "operator": "equals",
+          "value": true,
+          "message": "The product is already withdrawn."
+        }
+      ],
+      "scope": "products:write",
+      "operations": [
+        {
+          "type": "modify_object",
+          "target_object_parameter": "product",
+          "property_modifications": {
+            "active": {
+              "type": "static_value",
+              "value": false
+            }
+          }
+        }
+      ]
+    },
+    {
+      "api_name": "record_invoice_line",
+      "display_name": "Record an invoice line",
+      "description": "Books one line of an invoice: creates the line, then attaches it to the contact invoiced and to the ledger account.",
+      "parameters": {
+        "contact": {
+          "data_type": {
+            "type": "ontology_object",
+            "object_type_api_name": "contact"
+          },
+          "required": true,
+          "description": "The contact invoiced."
+        },
+        "account": {
+          "data_type": {
+            "type": "ontology_object",
+            "object_type_api_name": "account"
+          },
+          "required": true,
+          "description": "The ledger account the line is booked on."
+        },
+        "line_id": {
+          "data_type": {
+            "type": "long"
+          },
+          "required": true
+        },
+        "invoice_number": {
+          "data_type": {
+            "type": "string"
+          },
+          "required": true
+        },
+        "invoice_date": {
+          "data_type": {
+            "type": "date"
+          },
+          "required": true
+        },
+        "amount": {
+          "data_type": {
+            "type": "double"
+          },
+          "required": true,
+          "description": "Euros, excluding tax."
+        }
+      },
+      "rules": [
+        {
+          "parameter": "contact",
+          "property": "contact_type",
+          "operator": "in",
+          "value": [
+            "CLIENT",
+            "FOURNISSEUR"
+          ],
+          "message": "Only a client or a supplier can be invoiced."
+        },
+        {
+          "parameter": "account",
+          "property": "account_class",
+          "operator": "in",
+          "value": [
+            "6",
+            "7"
+          ],
+          "message": "An invoice line is booked on an expense (6) or income (7) account."
+        }
+      ],
+      "scope": "invoices:write",
+      "operations": [
+        {
+          "type": "create_object",
+          "object_type_api_name": "invoice_line",
+          "assign_to_parameter": "line",
+          "property_values": {
+            "line_id": {
+              "type": "parameter_value",
+              "parameter": "line_id"
+            },
+            "invoice_number": {
+              "type": "parameter_value",
+              "parameter": "invoice_number"
+            },
+            "invoice_date": {
+              "type": "parameter_value",
+              "parameter": "invoice_date"
+            },
+            "amount": {
+              "type": "parameter_value",
+              "parameter": "amount"
+            },
+            "direction": {
+              "type": "static_value",
+              "value": "SALE"
+            }
+          }
+        },
+        {
+          "type": "add_link",
+          "link_type_api_name": "contact_invoice_lines",
+          "source_object_parameter": "contact",
+          "target_object_parameter": "line"
+        },
+        {
+          "type": "add_link",
+          "link_type_api_name": "account_invoice_lines",
+          "source_object_parameter": "account",
+          "target_object_parameter": "line"
+        }
+      ]
+    }
+  ]
+}

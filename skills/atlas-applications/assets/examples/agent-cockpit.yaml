@@ -1,0 +1,107 @@
+# Data on the left, a chat with an agent of the project over the full height on the right.
+#
+# Assumes a dataset `support/tickets` with the columns:
+#   id (text), service (text), priorite (text), statut (text),
+#   ouvert_le (date), delai_heures (number)
+# and an agent of the same project whose slug is `assistant-support`.
+# Replace the dataset reference, the column names and the agent with real ones.
+apiVersion: atlas/v1
+kind: App
+metadata:
+  name: cockpit-support
+  title: Cockpit support
+
+theme:
+  card: { light: "#f8fafc", dark: "#111827" }
+
+sources:
+  tickets:
+    dataset: support/tickets
+
+  par_service:
+    query: |
+      select service, count(*) as tickets
+      from ${sources.tickets}
+      where (${state.priorite} is null or priorite = ${state.priorite})
+        and (not ${state.ouverts_seulement} or statut = 'ouvert')
+      group by service
+      order by tickets desc
+
+  par_jour:
+    query: |
+      select ouvert_le as jour, count(*) as tickets
+      from ${sources.tickets}
+      where ${state.priorite} is null or priorite = ${state.priorite}
+      group by ouvert_le
+      order by ouvert_le
+
+state:
+  priorite: { type: string }
+  ouverts_seulement: { type: boolean, default: true }
+
+# The root is a row: the main column takes three quarters of the width, the chat the rest.
+layout:
+  row:
+    - column:
+        width: 3
+        rows:
+          - [filtre_priorite, filtre_ouverts]
+          - [ouverts, delai_moyen, delai_max]
+          - [services, tendance]
+          - liste: 1
+    - assistant: 1
+
+widgets:
+  filtre_priorite:
+    type: filter.select
+    props:
+      label: Priorité
+      placeholder: Toutes
+      bind: state.priorite
+      options: { source: tickets, field: priorite }
+  filtre_ouverts:
+    type: filter.toggle
+    props: { label: Tickets ouverts seulement, bind: state.ouverts_seulement }
+
+  ouverts:
+    type: kpi
+    props:
+      label: Tickets ouverts
+      source: tickets
+      value: count(*)
+      filter: { statut: ouvert, priorite: "${state.priorite}" }
+  delai_moyen:
+    type: kpi
+    props:
+      label: Délai moyen (h)
+      source: tickets
+      value: avg(delai_heures)
+      subtitle: "Priorité : ${state.priorite}"
+      filter: { priorite: "${state.priorite}" }
+  delai_max:
+    type: kpi
+    props:
+      label: Délai maximum (h)
+      source: tickets
+      value: max(delai_heures)
+      color: red
+      filter: { priorite: "${state.priorite}" }
+
+  services:
+    type: chart.bar
+    props: { title: Tickets par service, source: par_service, x: service, y: tickets }
+  tendance:
+    type: chart.area
+    props: { title: Ouvertures par jour, source: par_jour, x: jour, y: tickets, color: violet }
+
+  liste:
+    type: table
+    props:
+      title: Tickets
+      source: tickets
+      columns: [id, service, priorite, statut, ouvert_le, delai_heures]
+      filter: { priorite: "${state.priorite}" }
+
+  assistant:
+    type: agent.chat
+    props: { agent: assistant-support }

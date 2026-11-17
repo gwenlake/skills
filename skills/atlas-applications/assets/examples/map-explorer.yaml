@@ -1,0 +1,96 @@
+# A map with filters on the left and the rows under it.
+#
+# Assumes a dataset `logistique/escales` with the columns:
+#   port (text), pays (text), latitude (number), longitude (number),
+#   type_navire (text), tonnage (number), date_escale (date)
+# Replace the dataset reference and the column names with real ones.
+apiVersion: atlas/v1
+kind: App
+metadata:
+  name: carte-escales
+  title: Escales par port
+
+sources:
+  escales:
+    dataset: logistique/escales
+
+  # One point per port rather than one per call: fewer points, and a number
+  # to show on hover. A map reads at most 100 000 rows.
+  ports:
+    query: |
+      select port, pays,
+             avg(latitude) as latitude,
+             avg(longitude) as longitude,
+             count(*) as escales,
+             sum(tonnage) as tonnage
+      from ${sources.escales}
+      where (${state.pays} is null or pays = ${state.pays})
+        and (${state.type_navire} is null or type_navire = ${state.type_navire})
+        and tonnage >= coalesce(${state.tonnage_min}, 0)
+      group by port, pays
+
+state:
+  pays: { type: string }
+  type_navire: { type: string }
+  tonnage_min: { type: number, default: 0 }      # emptying the input makes it null: hence the coalesce
+
+layout:
+  row:
+    - column:
+        width: 280px
+        rows: [intro, filtre_pays, filtre_type, filtre_tonnage, nb_ports, tonnage_total]
+    - column:
+        width: 1
+        rows:
+          - carte: 2
+          - liste: 1
+
+widgets:
+  intro:
+    type: text
+    props:
+      content: |
+        ## Escales
+        Ports ayant reçu au moins une escale de plus de **${state.tonnage_min} t**.
+
+  filtre_pays:
+    type: filter.select
+    props:
+      label: Pays
+      placeholder: Tous les pays
+      bind: state.pays
+      options: { source: escales, field: pays }
+  filtre_type:
+    type: filter.select
+    props:
+      label: Type de navire
+      placeholder: Tous les types
+      bind: state.type_navire
+      options: { source: escales, field: type_navire }
+  filtre_tonnage:
+    type: filter.number
+    props: { label: Tonnage minimum, bind: state.tonnage_min, min: 0, step: 1000 }
+
+  nb_ports:
+    type: kpi
+    props: { label: Ports, source: ports, value: count(*) }
+  tonnage_total:
+    type: kpi
+    props: { label: Tonnage total, source: ports, value: sum(tonnage), color: orange }
+
+  carte:
+    type: map
+    props:
+      title: Ports
+      source: ports
+      lat: latitude
+      lon: longitude
+      label: port
+      color: orange
+      size: 6
+  liste:
+    type: table
+    props:
+      title: Détail par port
+      source: ports
+      columns: [port, pays, escales, tonnage]

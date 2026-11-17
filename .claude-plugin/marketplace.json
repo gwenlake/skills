@@ -1,0 +1,23 @@
+{
+  "name": "gwenlake",
+  "owner": {
+    "name": "Gwenlake"
+  },
+  "metadata": {
+    "description": "Skills for building on Gwenlake Atlas",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "gwenlake-skills",
+      "description": "Skills for Gwenlake Atlas: call the API, build declarative applications (app.yaml), and design ontologies from the data of a project",
+      "source": "./",
+      "strict": false,
+      "skills": [
+        "./skills/atlas-api",
+        "./skills/atlas-applications",
+        "./skills/atlas-ontologies"
+      ]
+    }
+  ]
+}

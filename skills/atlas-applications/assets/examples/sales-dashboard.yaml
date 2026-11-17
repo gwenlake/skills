@@ -1,0 +1,136 @@
+# A classic dashboard: two filters, four KPIs, a trend, a ranking, a pie and a table.
+#
+# Assumes a dataset `ventes/commandes` with the columns:
+#   date_commande (date), region (text), categorie (text), client (text),
+#   montant (number), marge (number)
+# Replace the dataset reference and the column names with real ones.
+apiVersion: atlas/v1
+kind: App
+metadata:
+  name: suivi-ventes
+  title: Suivi des ventes
+
+sources:
+  commandes:
+    dataset: ventes/commandes
+
+  # One row per month: what the trend draws. A chart draws the rows of its
+  # source as they are, so the aggregation and the order are done here.
+  ca_mensuel:
+    query: |
+      select date_trunc('month', date_commande)::date as mois,
+             sum(montant) as chiffre_affaires
+      from ${sources.commandes}
+      where (${state.region} is null or region = ${state.region})
+        and (${state.depuis} is null or date_commande >= ${state.depuis})
+      group by 1
+      order by 1
+
+  # The ten best categories, largest first.
+  top_categories:
+    query: |
+      select categorie, sum(montant) as chiffre_affaires
+      from ${sources.commandes}
+      where (${state.region} is null or region = ${state.region})
+        and (${state.depuis} is null or date_commande >= ${state.depuis})
+      group by categorie
+      order by chiffre_affaires desc
+      limit 10
+
+  # A one-row query for a number a plain aggregate cannot express (a ratio).
+  indicateurs:
+    query: |
+      select sum(marge) / nullif(sum(montant), 0) as taux_marge,
+             count(distinct client) as clients
+      from ${sources.commandes}
+      where (${state.region} is null or region = ${state.region})
+        and (${state.depuis} is null or date_commande >= ${state.depuis})
+
+  # The rows of the table, with the date filter a widget `filter` cannot express.
+  commandes_filtrees:
+    query: |
+      select date_commande, region, categorie, client, montant, marge
+      from ${sources.commandes}
+      where ${state.depuis} is null or date_commande >= ${state.depuis}
+      order by date_commande desc
+
+state:
+  region: { type: string }                       # null: every region
+  depuis: { type: date, default: 2026-01-01 }
+
+layout:
+  - [filtre_region, filtre_depuis]
+  - [ca, commandes, clients, taux_marge]
+  - [evolution: 2, categories: 1, regions: 1]
+  - detail: 1
+
+widgets:
+  filtre_region:
+    type: filter.select
+    props:
+      label: Région
+      placeholder: Toutes les régions
+      bind: state.region
+      options: { source: commandes, field: region }
+  filtre_depuis:
+    type: filter.date
+    props: { label: Depuis le, bind: state.depuis }
+
+  ca:
+    type: kpi
+    props:
+      label: Chiffre d'affaires
+      source: commandes_filtrees
+      value: sum(montant)
+      format: eur
+      filter: { region: "${state.region}" }
+  commandes:
+    type: kpi
+    props:
+      label: Commandes
+      source: commandes_filtrees
+      value: count(*)
+      filter: { region: "${state.region}" }
+  clients:
+    type: kpi
+    props: { label: Clients actifs, source: indicateurs, value: max(clients) }
+  taux_marge:
+    type: kpi
+    props:
+      label: Taux de marge
+      source: indicateurs
+      value: max(taux_marge)
+      format: percent            # a ratio: 0.31 shows 31 %
+      color: green
+
+  evolution:
+    type: chart.line
+    props:
+      title: Chiffre d'affaires mensuel
+      source: ca_mensuel
+      x: mois
+      y: chiffre_affaires
+      fill: true
+  categories:
+    type: chart.bar
+    props:
+      title: Top 10 des catégories
+      source: top_categories
+      x: categorie
+      y: chiffre_affaires
+  regions:
+    type: chart.pie
+    props:
+      title: Répartition par région
+      source: commandes_filtrees
+      category: region
+      value: sum(montant)
+
+  detail:
+    type: table
+    props:
+      title: Commandes
+      source: commandes_filtrees
+      columns: [date_commande, region, categorie, client, montant]
+      page_size: 50
+      filter: { region: "${state.region}" }
