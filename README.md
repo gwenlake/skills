@@ -4,6 +4,10 @@ Skills are folders of instructions, scripts and resources that an agent loads wh
 
 Each skill is self-contained in its own folder, with a `SKILL.md` file holding the metadata and the instructions, in the [Agent Skills](https://agentskills.io) convention.
 
+## Disclaimer
+
+**These skills are provided for demonstration and educational purposes only.** While they describe how Gwenlake Atlas works, the platform evolves, and the behavior you get from the platform or from an agent using these skills may differ from what is shown here. These skills are meant to illustrate patterns and possibilities. Always test skills thoroughly in your own environment before relying on them for critical tasks.
+
 # Skill sets
 
 - [./skills](./skills): the skills
