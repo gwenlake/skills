@@ -42,7 +42,17 @@ Alternatively, directly install the plugin via:
 /plugin install gwenlake-skills@gwenlake
 ```
 
-After installing the plugin, you can use a skill by just mentioning it. For instance, with an API key in `GWENLAKE_API_KEY` or a profile in `~/.gwenlake/credentials`, you can ask Claude Code to do something like: "Create the ontology of the `sales` project in Atlas", "Build an Atlas application over the `ventes/commandes` dataset with a filter by region and the monthly revenue", or "Export the `sales.customers` dataset to a Parquet file".
+After installing the plugin, Claude Code needs an API key to reach your platform: set `GWENLAKE_API_KEY`, or create a profile in `~/.gwenlake/credentials`.
+
+You do not have to name a skill: Claude loads the one that matches your request. Just ask for what you want:
+
+| You ask | Skill loaded |
+| --- | --- |
+| "Create the ontology of the `sales` project in Atlas" | `atlas-ontologies` |
+| "Build an Atlas application over the `sales/orders` dataset, with a filter by region and the monthly revenue" | `atlas-applications` |
+| "Export the `sales.customers` dataset of Atlas to a Parquet file" | `atlas-api` |
+
+To be sure a given skill is used, name it in your request: "Use the `atlas-ontologies` skill to create the ontology of the `sales` project", or call it directly with `/gwenlake-skills:atlas-ontologies`.
 
 ## Claude.ai
 
