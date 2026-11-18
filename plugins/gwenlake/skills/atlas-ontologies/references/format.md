@@ -10,7 +10,7 @@ The format in full, the routes, and what the platform answers. The workflow and 
 - [Link types](#link-types)
 - [Action types](#action-types)
 - [What the platform validates, and what it does not](#what-the-platform-validates-and-what-it-does-not)
-- [Routes](#routes)
+- [Tools](#tools)
 - [Objects as JSON-LD](#objects-as-json-ld)
 - [Status codes and messages](#status-codes-and-messages)
 - [Differences with the public guide](#differences-with-the-public-guide)
@@ -41,7 +41,7 @@ The format in full, the routes, and what the platform answers. The workflow and 
 | `base_uri` | text | the base of every `@id`. Absent: `urn:ontology:<api_name>` |
 | `object_types`, `link_types`, `action_types` | lists | absent or `[]` for none |
 
-A read (`GET /ontologies/{id}`) returns the same keys plus the resource's own: `object`, `id`, `slug`, `alias`, `organization_id`, `parent_id`, `created_by`, `created_at`, `updated_at`, `is_standard`. Every optional key comes back, `null` when unset.
+A read (`get_ontology`) returns the same keys plus the resource's own: `object`, `id`, `slug`, `alias`, `organization_id`, `parent_id`, `created_by`, `created_at`, `updated_at`, `is_standard`. Every optional key comes back, `null` when unset.
 
 ## Object types
 
@@ -220,7 +220,7 @@ Operations are checked in order: a name introduced by `assign_to_parameter` can 
 - a link operation whose two ends are swapped with respect to the link type;
 - a `modify_object` that changes the primary key.
 
-`scripts/atlas_ontology.py check` reports the first list as errors and the second as errors (dropped keys) or warnings.
+Nothing reports the second list for you: read each action against it before saving.
 
 An action is declared on the model; it does not depend on the bindings. Take the constants of its rules and static values from the data (`PROSPECT`, not `prospect`): a rule comparing to a value the column never holds refuses every call.
 
@@ -248,33 +248,25 @@ An action is declared on the model; it does not depend on the bindings. Take the
 - in an action: the type of a value against its property, the primary key of a created object, the direction of a link operation;
 - that `api_name` is not already used by another ontology of the project.
 
-`scripts/atlas_ontology.py check` covers both lists.
+The second list is yours to check, with the queries of *Checking, saving, fixing* in `SKILL.md`.
 
-## Routes
+## Tools
 
-Base URL `https://atlas.gwenlake.com/api/v1` (a tenant: `https://<tenant>.gwenlakeatlas.com/api/v1`), `Authorization: Bearer <key>`, JSON bodies.
+Through the `gwenlake` MCP server, as the signed-in user:
 
-| Request | Does |
+| Tool | Does |
 | --- | --- |
-| `GET /ontologies` (`?project_id=`) | summaries: `id`, `name`, `slug`, `api_name`, `version`, `is_standard`. The platform's twenty standard ontologies are always in the listing |
-| `GET /ontologies/{id}` | the whole specification |
-| `POST /ontologies` | creates one in `project_id`; answers the stored ontology with its `id` |
-| `PATCH /ontologies/{id}` | updates. A collection given (`object_types`, `link_types`, `action_types`) **replaces the stored one wholesale**; a collection left out is kept. `name` regenerates the slug |
-| `DELETE /ontologies/{id}` | deletes it; the datasets are untouched |
-| `GET /ontologies/{id}/objects/{object_type}?limit=&offset=` | the instances of a bound type |
-| `GET /ontologies/{id}/objects/{object_type}/{pk}` | one instance |
-| `GET /ontologies/{id}/objects/{object_type}/{pk}/links/{link_type}` | the objects linked to an instance |
-| `GET /ontologies/{id}/links/{link_type}?limit=` | the edges of a link, as source and target references |
+| `list_ontologies(project_id)` | summaries: `id`, `name`, `api_name`, `version`, `is_standard`. The platform's standard ontologies are always in the listing |
+| `get_ontology(ontology_id)` | the whole specification |
+| `create_ontology(project_id, api_name, object_types, link_types, action_types, name, description)` | creates one in the project; answers the stored ontology with its `id` |
+| `update_ontology(ontology_id, …)` | updates. A collection given (`object_types`, `link_types`, `action_types`) **replaces the stored one wholesale**; a collection left out is kept. `name` regenerates the slug |
+| `list_ontology_objects(ontology_id, object_type, limit, offset)` | the instances of a bound type |
+| `get_ontology_object(ontology_id, object_type, primary_key)` | one instance |
+| `list_linked_objects(ontology_id, object_type, primary_key, link_type)` | the objects linked to an instance |
 
-There is no validate-only route and no version history: check before saving, and keep the JSON file under version control.
+`version` and `base_uri` are not arguments of the tools: the platform keeps the ones it has. There is no validate-only call, no version history and no deletion through the server: check before saving.
 
-```bash
-curl -X POST https://atlas.gwenlake.com/api/v1/ontologies \
-  -H "Authorization: Bearer $GWENLAKE_API_KEY" -H "Content-Type: application/json" \
-  -d @ontology.json          # the file must hold "project_id"
-```
-
-Rights: reading takes the Viewer role, creating and changing the Editor role. Reading instances also takes the right to read the bound dataset (`datasets:read`).
+Rights: reading takes the Viewer role, creating and changing the Editor role. Reading instances also takes the right to read the bound dataset.
 
 ## Objects as JSON-LD
 
@@ -319,10 +311,10 @@ Instances are served as `application/ld+json`, read from the datasets with the s
 | `422` | `action_type 'x': link operation references unknown link_type 'y'` | |
 | `422` | `'x' is not a valid scope; expected \`<resource>:<action>\`, lowercase` | |
 | `422` | a long list naming `ModifyObjectOperation`, `CreateObjectOperation`, `LinkOperation`… with `Field required` | one operation matches none of the five shapes: the platform lists what each shape misses. Find the one of your `type` and add its missing key |
-| `400` | `link_type 'x' references unknown target_object_type 'y'` on a `PATCH` | the update removed a type a stored link still names |
+| `400` | `link_type 'x' references unknown target_object_type 'y'` on an update | the update removed a type a stored link still names |
 | `400` | `Error querying dataset … Referenced column "x" not found` on a read | a declared property is not a column of the bound dataset |
 | `403` | `Missing scope 'datasets:read' on res.dataset.…` on a read | the bound dataset is not readable by the caller — or does not exist |
-| `404` | on `/ontologies/{id}/…` | no such ontology, object type or object |
+| `404` | on any read | no such ontology, object type or object |
 
 The platform reports its `422` errors together, each with the place (`object_types.0.properties.sku.data_type`): fix them all, then save again.
 
