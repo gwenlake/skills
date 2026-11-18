@@ -29,20 +29,25 @@ You can register this repository as a Claude Code Plugin marketplace by running 
 /plugin marketplace add gwenlake/skills
 ```
 
-Then, to install the skills:
+Then, to install the plugin:
 
 1. Select `Browse and install plugins`
-2. Select `gwenlake`
-3. Select `gwenlake-skills`
+2. Select the `gwenlake` marketplace
+3. Select the `gwenlake` plugin
 4. Select `Install now`
 
 Alternatively, directly install the plugin via:
 
 ```
-/plugin install gwenlake-skills@gwenlake
+/plugin install gwenlake@gwenlake
 ```
 
-After installing the plugin, Claude Code needs an API key to reach your platform: set `GWENLAKE_API_KEY`, or create a profile in `~/.gwenlake/credentials`.
+The plugin brings two things:
+
+- the **skills** listed above. They call the Atlas API, so Claude Code needs an API key to reach your platform: set `GWENLAKE_API_KEY`, or create a profile in `~/.gwenlake/credentials`.
+- the **Gwenlake MCP server** (`https://atlas.gwenlake.com/mcp`), which lets Claude search the catalog, query datasets in SQL, read ontologies and documents, ask agents and follow builds. It signs you in with your Gwenlake account: run `/mcp`, select `gwenlake` and choose `Authenticate`. No API key is involved.
+
+If your platform has its own address, set `GWENLAKE_MCP_URL` to its MCP endpoint before starting Claude Code (for instance `https://<your-domain>/api/v1/mcp`).
 
 You do not have to name a skill: Claude loads the one that matches your request. Just ask for what you want:
 
@@ -52,7 +57,7 @@ You do not have to name a skill: Claude loads the one that matches your request.
 | "Build an Atlas application over the `sales/orders` dataset, with a filter by region and the monthly revenue" | `atlas-applications` |
 | "Export the `sales.customers` dataset of Atlas to a Parquet file" | `atlas-api` |
 
-To be sure a given skill is used, name it in your request: "Use the `atlas-ontologies` skill to create the ontology of the `sales` project", or call it directly with `/gwenlake-skills:atlas-ontologies`.
+To be sure a given skill is used, name it in your request: "Use the `atlas-ontologies` skill to create the ontology of the `sales` project", or call it directly with `/gwenlake:atlas-ontologies`.
 
 ## Claude.ai
 
