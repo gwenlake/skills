@@ -1,7 +1,6 @@
 ---
 name: atlas-applications
-description: "Build, edit, validate and publish Gwenlake Atlas applications — the declarative business screens (filters, KPIs, charts, tables, maps, agent chats) described by one `app.yaml` file (`apiVersion: atlas/v1`, `kind: App`) over the datasets of an Atlas project. Use this skill whenever the user asks for an application, app, dashboard, screen, cockpit or report page in Gwenlake Atlas (or \"Atlas\", \"Gwenlake\"), mentions `app.yaml`, Atlas widgets, or the `/applications` API, wants to add a filter, chart, KPI, table, map or chat to an existing Atlas app, or has an app definition that is refused or shows error cards — even when they do not say \"declarative\" or \"YAML\"."
-compatibility: Writing an app.yaml needs nothing. Validating and publishing need network access to an Atlas endpoint and an API key (GWENLAKE_API_KEY or ~/.gwenlake/credentials); the bundled script needs Python 3.9+, standard library only.
+description: "Build, edit, validate and publish Gwenlake Atlas applications with the Gwenlake MCP server: the declarative business screens (filters, KPIs, charts, tables, maps, agent chats) described by one app.yaml file (apiVersion atlas/v1, kind App) over the datasets of an Atlas project. Use whenever the user asks for an application, app, dashboard, screen, cockpit or report page in Gwenlake Atlas, mentions app.yaml or Atlas widgets, wants to add a filter, chart, KPI, table, map or chat to an existing Atlas app, or has an app definition that is refused or shows an error card."
 ---
 
 # Gwenlake Atlas applications
@@ -13,38 +12,35 @@ An application is **declarative**. You do not write React, HTML or a backend: yo
 Two things make this harder than it looks, and are the reason this skill exists:
 
 - The format is strict. Any unknown key is refused, identifiers have a fixed shape, and a refused file stores nothing.
-- The platform's validation **does not know the widget types**. It accepts `type: tabel` or a misspelled prop without a word; the interface then shows an error card in place of that widget. A file can be "valid" and still be broken on screen. Check widgets against the catalog below (the bundled script does it for you).
+- The platform's validation **does not know the widget types**. It accepts `type: tabel` or a misspelled prop without a word; the interface then shows an error card in place of that widget. A file can be "valid" and still be broken on screen. Check every widget against the catalog below yourself: nothing else will.
 
 ## Workflow
 
-1. **Find the data.** Get the project slug, the slugs of the datasets and their real column names. Never invent a column: a wrong name passes validation and fails on screen.
+Everything goes through the tools of the `gwenlake` MCP server, as the signed-in user. No script and no API key are involved.
+
+1. **Find the data.** Get the project, its datasets and their real column names. Never invent a column: a wrong name passes validation and fails on screen.
 2. **Design the screen** from what the user wants to *decide or see*, not from the list of widgets: which filters, which 2–4 headline numbers, which charts, whether a table or a chat helps.
 3. **Write `app.yaml`**: sources → state → widgets → layout.
-4. **Validate** (nothing is saved) and fix every error and widget problem.
-5. **Create** the application, or **save** a new revision of an existing one.
-6. **Tell the user** the application id and its URL, and anything you assumed.
+4. **Validate** with `validate_application` (nothing is saved), fix every error and warning, and check each widget against the catalog.
+5. **Show the user what you are about to publish and get their agreement**, then create the application with `create_application`, or save a new revision of an existing one with `update_application`.
+6. **Check that the data comes back**, then tell the user the application id and anything you assumed.
 
-If you cannot reach the API (no key, no network, an agent without a shell), still do steps 1–3 as far as you can, say what you could not verify, and hand over the YAML: the user pastes it in the Atlas interface (**New app** → **Edit** → **YAML** tab → **Save**), which validates it the same way.
+| Step | Tool |
+| --- | --- |
+| find the project | `search_catalog`, `list_projects` |
+| its datasets | `list_datasets(project_id)` |
+| real column names, and the names to write in a source | `describe_dataset(dataset_id)` |
+| look at values, test a query | `query_dataset(statement)`, DuckDB, read-only |
+| find an existing application | `search_catalog(query, resource_type="application")`, `list_project_contents(project_id, resource_type="application")` |
+| read its `app.yaml` | `get_application(application_id)`: `definition` is the YAML, `version` its revision |
+| check a draft | `validate_application(definition, project_id=…)` |
+| publish | `create_application(project_id, definition)`, `update_application(application_id, definition, base_version)` |
 
-### The bundled script
+`definition` is always the YAML text itself, whole, never a path and never a fragment.
 
-`scripts/atlas_app.py` (standard library only) covers every step. The `gwenlake` CLI and Python library cannot send an `app.yaml` yet, so use this script or `curl` for applications.
+**The name of a dataset in a source** is `<project slug>/<dataset slug>`, with a slash. `describe_dataset` gives `sql_name` as `<project>.<dataset>`, with a dot: the same two names, so replace the dot with a slash in `sources`, and keep the dot when you test a query with `query_dataset`.
 
-```bash
-python scripts/atlas_app.py projects                          # project slugs and ids
-python scripts/atlas_app.py datasets <project>                # dataset slugs, as <project>/<dataset>
-python scripts/atlas_app.py columns <project>/<dataset>       # real column names, with sample values
-python scripts/atlas_app.py validate app.yaml --project <project>   # platform check + widget check; saves nothing
-python scripts/atlas_app.py create app.yaml --project <project>     # prints the id and the URL
-python scripts/atlas_app.py list --project <project>
-python scripts/atlas_app.py get <application id> --yaml -o app.yaml # the source of an existing app
-python scripts/atlas_app.py save app.yaml --app <application id>    # a new revision
-python scripts/atlas_app.py read <application id> <source> --options '{"aggregate": "count(*)"}'
-```
-
-It resolves credentials like the `gwenlake` command: `--api-key`, `--profile`, `GWENLAKE_API_KEY`, then the `default` profile of `~/.gwenlake/credentials`; the endpoint from `--base-url`, `GWENLAKE_BASE_URL`, the profile, else `https://atlas.gwenlake.com/api/v1`. A tenant is `--base-url acme` (`https://acme.gwenlakeatlas.com/api/v1`). Never print or commit an API key.
-
-Without the script, the same calls with `curl` are in [The API](#the-api). To explore data you can also use `gwenlake datasets list --project <p>` and `gwenlake sql "SELECT * FROM '<project>.<dataset>' LIMIT 5"`.
+If a tool answers that it is disabled on this MCP server, writing is off for this deployment or this plan. Still do steps 1 to 4, say what you could not do, and hand over the YAML: the user pastes it in the Atlas interface (**New app** → **Edit** → **YAML** tab → **Save**), which validates it the same way.
 
 ## The file
 
@@ -279,7 +275,7 @@ Leave it out unless the user asks for a look.
 
 ## Validating, saving, and fixing errors
 
-A YAML is validated when it is saved and **nothing is stored when it has an error**. Every error comes back at once, each with the path of the faulty element, a message saying what to correct, and the line and column — read them all, fix them all, validate again:
+`validate_application` runs the same checks as a save and stores nothing: it answers `valid`, `errors` and `warnings`. A save **stores nothing when the YAML has an error**. Every error comes back at once, each with the path of the faulty element, a message saying what to correct, and the line and column. Read them all, fix them all, validate again:
 
 ```json
 { "path": "widgets.filtre.props.bind", "message": "`bind` must be `state.<id>` with a declared state variable (got `state.secteur`).", "line": 37, "column": 7 }
@@ -297,46 +293,18 @@ Beyond the format, a save checks that each `query` is a single `SELECT` and that
 | `Inside a row, the size of an element is its width` | `height` given to an element of a row (or `width` in a column) |
 | `a query reads dataset sources only` | a query citing another query: read the datasets and compose in one statement (a CTE) |
 | `${sources.x} is only allowed inside a query` | used in `props`: name the source with the `source` prop |
-| `No dataset … or you cannot read it` | wrong slugs, a dot instead of a slash, another organization, or an API key confined to another project |
+| `No dataset … or you cannot read it` | wrong slugs, a dot instead of a slash, or a dataset of another organization |
 | `… an app source reads tabular datasets only` | the dataset is a vector dataset: pick a tabular one |
-| HTTP 400 on save | the application is rendered by a **template** (an older, hand-coded app): it cannot take a YAML. Create a new application instead |
-| HTTP 409 | the slug `metadata.name` is already taken in the project, or someone saved a newer revision |
+| a save refused because the application has no declarative definition | the application is rendered by a **template** (an older, hand-coded app): it cannot take a YAML. Create a new application instead |
+| a conflict on save | the slug `metadata.name` is already taken in the project, or someone saved a newer revision |
 
-After a save, check that the data comes back: `read <id> <source> --options '{"limit": 3}'` for one source of each kind. A chart that is empty on screen is usually a query whose `where` meets a `NULL` variable, or a column name that does not exist.
+**Checking the widgets.** Validation does not know the widget types. Before publishing, read each widget of your file against [Widgets](#widgets) and `references/widgets.md`: the `type` is one of the fifteen, every prop belongs to that type, every required prop is there, every field named is a column of its source.
 
-**Editing an existing app**: fetch its YAML source (`get <id> --yaml -o app.yaml`; a `404 This application has no declarative definition` means the app holds no `app.yaml` — a template app, or one created empty — so there is nothing to edit: create a new one), change it — the text is stored as sent, so keep the comments and the formatting — and save it. Every save is a revision; restoring one is saving its text again. Changing `metadata.name` or `title` renames the application.
+**After a save, check that the data comes back.** For each `query` source, run its statement with `query_dataset`, with the datasets written `<project>.<dataset>` and each `${state.x}` replaced by its default, then by a real value. For a `dataset` source, `SELECT count(*)`. A chart that is empty on screen is usually a query whose `where` meets a `NULL` variable, or a column name that does not exist.
+
+**Editing an existing app**: read it with `get_application`. `definition` is its YAML source; an application that returns none is rendered by a template, or was created empty, so there is nothing to edit: create a new one. Change the text, keeping the comments and the formatting since it is stored as sent, validate it with `validate_application(definition, application_id=…)`, then save it with `update_application`, passing the `version` you read as `base_version`: a save over a revision newer than that one is refused instead of erasing someone else's work. Every save is a revision; restoring one is saving its text again.
 
 **Who can see it**: a source is read with the rights of the person *looking at* the app, who must be able to read the datasets behind it. Saving needs the Editor role (`applications:write`), reading the Viewer role.
-
-## The API
-
-Base URL `https://atlas.gwenlake.com/api/v1` (a tenant: `https://<tenant>.gwenlakeatlas.com/api/v1`), `Authorization: Bearer <key>`. The application text travels as **raw YAML**, `Content-Type: application/yaml` — not JSON, not multipart.
-
-| Request | Does |
-| --- | --- |
-| `POST /applications/validate?project_id=` (YAML body) | `{valid, spec, errors, warnings}`, always `200`, nothing saved |
-| `POST /applications?project_id=` (YAML body) | creates the application: `201`, or `422` with `errors` |
-| `PUT /applications/{id}` (YAML body) | saves a new revision; `?base_version=` refuses (`409`) if a newer one exists |
-| `GET /applications/{id}` | the application with `spec` (normalized form), `version`, `warnings` |
-| `GET /applications/{id}` with `Accept: application/yaml` | the YAML source |
-| `GET /applications?project_id=` | the applications of a project |
-| `GET /applications/{id}/versions` | the revisions, newest first |
-| `POST /applications/{id}/sources/{source}/read` (JSON body) | reads a source of the **saved** app |
-| `GET /applications/{id}/sources/{source}/columns` | the columns of a source, `{name, type}` |
-
-```bash
-curl -X POST "https://atlas.gwenlake.com/api/v1/applications/validate?project_id=$PROJECT_ID" \
-  -H "Authorization: Bearer $GWENLAKE_API_KEY" -H "Content-Type: application/yaml" \
-  --data-binary @app.yaml
-
-curl -X POST "https://atlas.gwenlake.com/api/v1/applications?project_id=$PROJECT_ID" \
-  -H "Authorization: Bearer $GWENLAKE_API_KEY" -H "Content-Type: application/yaml" \
-  --data-binary @app.yaml
-```
-
-Use `--data-binary`, not `-d`: `-d` strips the newlines and destroys the YAML. Project ids (`res.project.…`) come from `GET /filesystem/projects`. The interface shows an application at `https://<host>/applications/<id>` and its editor at `/applications/<id>/edit`.
-
-From a backend, send the same requests with any HTTP client: read options, the normalized `spec`, status codes and a Python example are in `references/api.md`.
 
 ## Before you hand over
 
@@ -344,14 +312,12 @@ From a backend, send the same requests with any HTTP client: read options, the n
 - Every widget is declared **and** placed once; every source and state variable is used.
 - Bar, line and area charts read a `query` that aggregates and sorts.
 - Every `${state.x}` in a query handles `NULL` (a boolean with a default aside).
-- Validation returns no error, no warning and no widget problem.
-- You told the user the application id, its URL, and what you assumed about the data.
+- `validate_application` returns no error and no warning, and you checked every widget against the catalog.
+- You told the user the application id and what you assumed about the data.
 
 ## Bundled files
 
-- `scripts/atlas_app.py` — explore, validate, create, save, read (see above).
-- `references/widgets.md` — each widget in detail, with examples and sizing.
-- `references/api.md` — the HTTP API in full: read options, normalized form, errors, a Python client.
-- `assets/examples/` — complete, validated applications to start from: `sales-dashboard.yaml` (filters, KPIs, charts, table), `map-explorer.yaml` (map and filters), `agent-cockpit.yaml` (side chat with an agent).
+- `references/widgets.md`: each widget in detail, with examples and sizing.
+- `assets/examples/`: complete applications to start from: `sales-dashboard.yaml` (filters, KPIs, charts, table), `map-explorer.yaml` (map and filters), `agent-cockpit.yaml` (side chat with an agent).
 
 The public documentation is at https://docs.gwenlake.com/atlas/guides/applications and https://docs.gwenlake.com/atlas/guides/app-widgets (index for agents: https://docs.gwenlake.com/atlas/llms.txt). If something here disagrees with what the platform answers, the platform is right: follow its error message.

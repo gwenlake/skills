@@ -1,7 +1,6 @@
 ---
 name: atlas-ontologies
-description: Design, generate, check and publish Gwenlake Atlas ontologies — the typed model of a project's domain (object types, properties, links, actions) bound to the datasets that hold the instances. Explains the real format the platform accepts, and builds an ontology automatically from a project by profiling its tables — schema, keys, the values of categorical columns (contact types, carton formats, ledger accounts…) and the references between tables — so the ontology matches the data exactly. Use this skill whenever the user asks to create, generate, update, fix or explain an ontology, a semantic layer, a data model or a knowledge graph in Gwenlake Atlas (or "Atlas", "Gwenlake"), wants a project's datasets described as business objects for an agent, mentions `object_types`, `link_types`, `/ontologies` or JSON-LD objects, or has an ontology that is refused or returns wrong or empty objects — even when they only say "model my project".
-compatibility: Reading the data and saving need network access to an Atlas endpoint and an API key (GWENLAKE_API_KEY or ~/.gwenlake/credentials). The bundled script needs Python 3.9+, standard library only. Writing the JSON by hand needs nothing.
+description: "Design, check and publish Gwenlake Atlas ontologies with the Gwenlake MCP server: the typed model of a project's domain (object types, properties, links, actions) bound to the datasets that hold the instances. Explains the format the platform accepts, and how to build an ontology from a project by profiling its tables in SQL (schema, keys, the values of categorical columns, the references between tables) so that it matches the data exactly. Use whenever the user asks to create, generate, update, fix or explain an ontology, a semantic layer, a data model or a knowledge graph in Gwenlake Atlas, wants the datasets of a project described as business objects for an agent, mentions object_types or link_types, or has an ontology that is refused or returns wrong or empty objects, even when they only say 'model my project'."
 ---
 
 # Gwenlake Atlas ontologies
@@ -13,31 +12,68 @@ It is the semantic layer over the data. An agent bound to an ontology queries it
 Two facts shape this skill:
 
 - **The format in the public guide is not the one the platform accepts.** The guide shows `object_types` as a map keyed by name; the platform wants a **list** of objects, each with its `api_name`. Its action example uses keys and an operator the platform does not know. Follow this file.
-- **The platform checks the format when it saves, not the data.** A property that is not a column, a primary key that is not unique, a dataset that does not exist: all accepted, all broken on read. Checking against the data is your job, and the bundled script does it.
+- **The platform checks the format when it saves, not the data.** A property that is not a column, a primary key that is not unique, a dataset that does not exist: all accepted, all broken on read. Checking against the data is your job, and you do it in SQL before saving.
+
+Everything here goes through the tools of the `gwenlake` MCP server, as the signed-in user. No script and no API key are involved.
 
 ## Workflow
 
 When the user hands you a project and asks for its ontology, do not model from the table names. Read the data.
 
-1. **Profile the project.** Columns and types, row counts, which columns are unique, the values of every categorical column, which columns reference another table.
-2. **Decide the model** from the profile: which tables are business objects, what identifies each, which columns are classifications, what links to what. This is the part that needs judgement — see [Modelling from the data](#modelling-from-the-data).
-3. **Write the ontology** (JSON). Start from the mechanical draft, then rename, describe, prune.
-4. **Check it** against the format and the data. Fix every error; nothing is saved.
-5. **Create it** (or update the existing one), then **verify** that every bound type and link reads.
-6. **Report**: the ontology id, what each object type is bound to, what you left out and why, and the questions only the user can answer.
+1. **Profile the project.** Columns and types, row counts, which columns are unique, the values of every categorical column, which columns reference another table. See [Profiling with SQL](#profiling-with-sql).
+2. **Decide the model** from the profile: which tables are business objects, what identifies each, which columns are classifications, what links to what. This is the part that needs judgement: see [Modelling from the data](#modelling-from-the-data).
+3. **Write the ontology** by the rules of [The format](#the-format).
+4. **Check it** against the format rules and against the data, with the queries of [Checking, saving, fixing](#checking-saving-fixing). Fix every error before saving anything.
+5. **Show the model to the user and get their agreement**, then create it with `create_ontology` (or change the existing one with `update_ontology`).
+6. **Verify** that every bound type and every link reads: `list_ontology_objects` on each type, `list_linked_objects` on one instance per link.
+7. **Report**: the ontology id, what each object type is bound to, what you left out and why, and the questions only the user can answer.
 
-```bash
-python scripts/atlas_ontology.py profile <project> -o profile.json     # reads the data; a few minutes on large tables
-python scripts/atlas_ontology.py draft profile.json -o ontology.json   # a first version, mechanically
-#   … edit ontology.json: names, descriptions, subtypes, links …
-python scripts/atlas_ontology.py check ontology.json                    # format + data; saves nothing
-python scripts/atlas_ontology.py create ontology.json --project <project>
-python scripts/atlas_ontology.py verify res.ontology.…                  # reads every bound type and link back
+| Step | Tool |
+| --- | --- |
+| find the project and its tables | `search_catalog`, `list_projects`, `list_datasets(project_id)` |
+| columns, row count and the name to use in SQL | `describe_dataset(dataset_id)`: `sql_name` is what goes in a `FROM` clause |
+| read the data | `query_dataset(statement)`, DuckDB, read-only |
+| existing ontologies of the project | `list_ontologies(project_id)`, `get_ontology(ontology_id)` |
+| save | `create_ontology`, `update_ontology` |
+| read back | `list_ontology_objects`, `get_ontology_object`, `list_linked_objects` |
+
+If `create_ontology` answers that it is disabled on this MCP server, writing is off for this deployment or this plan. Hand the user the JSON document and tell them to save it from the Atlas interface.
+
+## Profiling with SQL
+
+Profile every tabular dataset of the project that could be part of the domain. `t` below stands for a dataset's `sql_name`. Results are capped at 200 rows, so always aggregate in the statement.
+
+**Rows, distinct values and nulls of every column, in one statement per table**:
+
+```sql
+SELECT count(*) AS n_rows,
+       count(DISTINCT contact_id) AS d_contact_id, count(*) - count(contact_id) AS null_contact_id,
+       count(DISTINCT contact_type) AS d_contact_type, count(*) - count(contact_type) AS null_contact_type
+FROM t
 ```
 
-The script resolves credentials like the `gwenlake` command: `--api-key`, `--profile`, `GWENLAKE_API_KEY`, then the `default` profile of `~/.gwenlake/credentials`. An API key is confined to its project: if the project "does not exist", you are on the wrong profile — ask the user which one, never print a key. `--datasets a,b,c` restricts a profile to some tables.
+A column is a **key candidate** when its distinct count equals the row count and it has no null. A column with few distinct values relative to the rows (up to a few dozen) is **categorical**.
 
-Without a shell or a key, ask the user for each table's columns, a sample and the values of its categorical columns, write the JSON by the rules below, say that it was **not** checked against the data, and hand it over.
+**The values of a categorical column, most frequent first**:
+
+```sql
+SELECT contact_type AS value, count(*) AS n FROM t GROUP BY 1 ORDER BY n DESC LIMIT 50
+```
+
+**The range of a date or numeric column**: `SELECT min(created_at), max(created_at) FROM t`.
+
+**A reference between two tables**: for a column of `child` whose name or values suggest the key of `parent`, measure the share of its distinct values found on the other side.
+
+```sql
+SELECT count(DISTINCT c.contact_id) AS n_values,
+       count(DISTINCT c.contact_id) FILTER (WHERE p.contact_id IS NOT NULL) AS n_found
+FROM child c LEFT JOIN parent p ON c.contact_id = p.contact_id
+WHERE c.contact_id IS NOT NULL
+```
+
+Test the pairs that make sense (same column name as a key candidate, or a name ending in `_id`, `_code`, `_number`), not every pair. On a project with many tables, start with the ones the user named and say which ones you left unprofiled.
+
+Without access to the data, ask the user for the columns of each table, a sample and the values of its categorical columns, write the JSON by the rules below, say that it was **not** checked against the data, and hand it over.
 
 ## The format
 
@@ -112,7 +148,7 @@ An ontology is one JSON document.
 | --- | --- | --- |
 | `api_name` | yes | the ontology's stable identifier, e.g. `sales`. It is the base of every object's `@id` (`urn:ontology:<api_name>/…`): do not change it once others rely on it |
 | `name` | yes | the displayed name; the resource's slug is derived from it |
-| `project_id` | on create | the project that holds it (the script adds it from `--project`) |
+| `project_id` | on create | the project that holds it: an argument of `create_ontology` |
 | `version` | no | a text of your choice (`"1"`, `"2026-11"`); bump it when the model changes |
 | `description` | no | what the model covers — an agent reads it to decide whether to use the ontology |
 | `base_uri` | no | the base of every `@id`; `urn:ontology:<api_name>` when absent |
@@ -173,7 +209,7 @@ A value, in `property_modifications` and `property_values`, is never bare: `{"ty
 - **A link with neither a foreign key nor an edge dataset is descriptive**: it tells what relates to what, but cannot be traversed.
 - **In an action**, a parameter's object type, a rule's parameter and property, an operation's parameters, properties and link type must all be declared; a rule's parameter must be an object parameter; `in` and `not_in` take a list. The guide's spelling — `"operator": "neq"`, `"parameter"` and `"properties"` in an operation — is not the platform's: the operator is refused, and the two keys are dropped silently, **leaving an action that saves and changes nothing**. The platform does not check that a value fits the property's type, that a `create_object` sets the primary key, nor that the two ends of a link operation are the right way round.
 
-`scripts/atlas_ontology.py check` enforces all of these, the data rules included. Every field, the JSON-LD routes and the error messages: `references/format.md`.
+Nothing enforces the data rules for you: run the checks of [Checking, saving, fixing](#checking-saving-fixing). Every field and the error messages: `references/format.md`.
 
 ## Modelling from the data
 
@@ -212,51 +248,64 @@ Worked decisions on a profile, designing actions, edge datasets, standard ontolo
 
 ## Checking, saving, fixing
 
-`check` reports three levels. **Errors** must be fixed; **warnings** deserve a decision (a declared type that differs from the column's, orphan values in a link); **notes** tell which columns of a bound dataset are not declared.
+There is no validate-only call for an ontology, and a save that succeeds proves nothing about the data. Check in two passes before `create_ontology`.
+
+**Format, by reading your own document** against the rules above: lists and maps the right way round, every identifier valid, every `data_type` in the allowed list, every `primary_key` a declared property, every link end a declared object type, every `foreign_key_property` a property of the *target*, no unknown key.
+
+**Data, with `query_dataset`**, for every bound object type and every link:
+
+| Check | Query | Must hold |
+| --- | --- | --- |
+| every property is a column | `SELECT <every declared property> FROM t LIMIT 1` | the statement runs; a misspelled name fails with `Referenced column "x" not found` |
+| the primary key identifies a row | `SELECT count(*), count(DISTINCT pk), count(*) - count(pk) FROM t` | the first two are equal and the third is 0 |
+| a link joins data | the reference query of [Profiling with SQL](#profiling-with-sql), on the foreign key of the target and the primary key of the source | `n_found` is not 0; if it is below `n_values`, report the orphans |
+| a constant of a rule or a `static_value` exists | `SELECT count(*) FROM t WHERE contact_type = 'PROSPECT'` | not 0, with the spelling of the data |
+
+Compare each declared `data_type` with the column type `describe_dataset` gives; a difference deserves a decision, not always a fix.
+
+**After saving**, read back: `list_ontology_objects(ontology_id, object_type, limit=3)` for every bound type, then `list_linked_objects` on one of those instances for every link that has a binding. An error here is a binding to fix, not a transient failure.
 
 | Message | Cause and fix |
 | --- | --- |
-| `must be a LIST of objects` | the map form of the guide: turn `{"customer": {…}}` into `[{"api_name": "customer", …}]` |
-| `is not a valid identifier` | a space, hyphen, accent or leading digit in an `api_name`, a property or a subtype |
-| `is not a key of an object type` | a misspelled key, which the platform would drop silently |
-| `is not a column of <dataset>` | the property is not spelled as the column is — or the type is bound to the wrong dataset |
-| `is not unique in <dataset>` | the primary key repeats: choose another column, or the table is not one-row-per-object |
-| `is not a property of the TARGET object type` | the foreign key is on the wrong side: turn the link round |
-| `no value of … is a …` | the link joins nothing: wrong column, wrong direction, or two columns that only share a name |
-| `is not an operator` | a rule written `neq`, `eq`, `gt`, `==`: use `not_equals`, `equals`, `greater_than`… |
-| `is not a key of a modify_object operation` | `parameter` / `properties` from the guide: write `target_object_parameter` and `property_modifications` |
-| `must be {"type": "static_value", …}` | a bare value in an operation: wrap it |
-| `is already a parameter` | `assign_to_parameter` must introduce a new name, not reuse a parameter |
-| `HTTP 422` on save | a format rule the platform enforces; the message names the element |
-| `HTTP 400 … references unknown …` on update | you removed an object type a link still names: remove or repoint the link in the same update |
-| `HTTP 403 Missing scope` | no right on the ontology or on a bound dataset — or an id that does not exist |
+| `Input should be a valid list` | the map form of the guide: turn `{"customer": {…}}` into `[{"api_name": "customer", …}]` |
+| an identifier refused | a space, hyphen, accent or leading digit in an `api_name`, a property or a subtype |
+| `Unknown data_type` | `text`, `int`, `number`, `datetime`: use the allowed names |
+| `Referenced column "x" not found`, on read | the property is not spelled as the column is, or the type is bound to the wrong dataset |
+| several objects with one `@id`, or an arbitrary row for "one object" | the primary key repeats: choose another column, or the table is not one row per object |
+| a foreign key refused as not a property of the target | the foreign key is on the wrong side: turn the link round |
+| a link that returns nothing | it joins nothing: wrong column, wrong direction, or two columns that only share a name |
+| an operator refused | a rule written `neq`, `eq`, `gt`, `==`: use `not_equals`, `equals`, `greater_than`… |
+| an action that saves and changes nothing | `parameter` / `properties` from the guide: write `target_object_parameter` and `property_modifications` |
+| a bare value refused in an operation | wrap it: `{"type": "static_value", "value": …}` |
+| a save refused as invalid | a format rule the platform enforces; the message names the element |
+| `references unknown …` on update | you removed an object type a link still names: remove or repoint the link in the same update |
+| a refusal about permission | no right on the ontology or on a bound dataset, or an id that does not exist |
 
-**Updating**: fetch the current definition (`get <id> --editable -o ontology.json`), edit, `update ontology.json --ontology <id>`. An update **replaces each of the three collections wholesale**: send them complete, not just the part that changed. Bump `version`. Renaming (`--rename`) regenerates the resource's slug. There is no version history to restore from: keep the file.
+**Updating**: read the current model with `get_ontology`, change it, and call `update_ontology` with the collections you changed. A collection passed **replaces the stored one wholesale**: send it complete, not just the part that changed. A collection left out is kept. There is no version history to restore from: before an update, show the user what will change, and keep the previous model in the conversation.
 
-**One ontology per domain in a project.** `api_name` is not unique on the platform: creating twice makes two ontologies with the same `@id`s. `create` refuses when the project already has that `api_name`; update the existing one instead.
+**One ontology per domain in a project.** `api_name` is not unique on the platform: creating twice makes two ontologies with the same `@id`s. Call `list_ontologies(project_id)` first, and update the existing one instead of creating a second.
 
-**Deleting** an ontology is `DELETE /ontologies/{id}`; confirm with the user first. Datasets are never touched by an ontology: it only reads them.
+**Deleting** an ontology is not possible through the MCP server: the user does it from the Atlas interface. Datasets are never touched by an ontology: it only reads them.
 
 ## Using the ontology
 
 - **In an agent**: name it under `resources:` of the agent's `agent.md` (`- ref: <project>.<ontology slug>`). The agent gets `model`, `list_objects`, `get_object`, `list_links` and `list_linked_objects`, and is told to query the ontology before the datasets behind it.
-- **Over HTTP**: `GET /ontologies/{id}/objects/{object_type}?limit=&offset=` (a JSON-LD `@graph`), `…/objects/{object_type}/{pk}`, `…/objects/{object_type}/{pk}/links/{link_type}`, `GET /ontologies/{id}/links/{link_type}`. The caller must be able to read the ontology **and** the datasets.
+- **From Claude**: `get_ontology` for the model, then `list_ontology_objects`, `get_ontology_object` and `list_linked_objects`. The caller must be able to read the ontology **and** the datasets.
 
 ## Before you hand over
 
 - You profiled the data; no column, key or value in the ontology is a guess.
-- Every bound object type has a primary key that `check` found unique and never null.
+- Every bound object type has a primary key that a query found unique and never null.
 - Every categorical column was decided: subtypes, a linked object type, or described values — with the values as stored.
 - Every link is oriented one → many, backed by a column of the target, and joins data.
-- Every action has a rule or a reason to have none, constants spelled as the data spells them, and operations that `check` found complete.
-- `check` reports no error, and `verify` read every bound type and link.
+- Every action has a rule or a reason to have none, constants spelled as the data spells them, and complete operations.
+- Every check query passed, and every bound type and link read back after saving.
 - You told the user the ontology id, what you left out and why, and what you assumed.
 
 ## Bundled files
 
-- `scripts/atlas_ontology.py` — `profile`, `draft`, `check`, `create`, `update`, `verify`, `list`, `get`.
-- `references/format.md` — every field, action types in full, the API routes, JSON-LD answers, the platform's messages.
-- `references/modelling.md` — reading a profile, the decisions worked on examples, designing actions, edge datasets, standard ontologies.
-- `assets/examples/trading-company.json` — a complete ontology: contacts with subtypes, a carton-format reference table, a chart of accounts with a self-link, invoice lines linked to all three, and three actions (a guarded modification, a withdrawal, a creation followed by two links). Replace the `dataset_id` placeholders.
+- `references/format.md`: every field, action types in full, the JSON-LD answers, the platform's messages.
+- `references/modelling.md`: reading a profile, the decisions worked on examples, designing actions, edge datasets, standard ontologies.
+- `assets/examples/trading-company.json`: a complete ontology: contacts with subtypes, a carton-format reference table, a chart of accounts with a self-link, invoice lines linked to all three, and three actions (a guarded modification, a withdrawal, a creation followed by two links). Replace the `dataset_id` placeholders.
 
 The public guide is at https://docs.gwenlake.com/atlas/guides/ontologies. Where it and this file disagree on the format, this file was checked against the platform; and if the platform answers otherwise than both, the platform is right: follow its error message.

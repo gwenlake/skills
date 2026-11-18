@@ -2,7 +2,7 @@
 
 Connects Claude to [Gwenlake Atlas](https://docs.gwenlake.com/atlas/) through the Gwenlake MCP server (`https://atlas.gwenlake.com/mcp`).
 
-With it, Claude can search the catalog of your organization, describe and query datasets in SQL, read ontologies and their objects, search documents, ask Atlas agents, and follow builds and their lineage. Where your plan allows it, Claude can also create datasets, transforms and schedules.
+With it, Claude can search the catalog of your organization, describe and query datasets in SQL, read ontologies and their objects, search documents, ask Atlas agents, and follow builds and their lineage. Where your plan allows it, Claude can also create datasets, transforms, schedules, ontologies and applications.
 
 ## Install
 
@@ -14,11 +14,17 @@ With it, Claude can search the catalog of your organization, describe and query 
 
 The server signs you in with your Gwenlake account. In Claude Code, run `/mcp`, select `gwenlake` and choose `Authenticate`. No API key is involved: Claude sees what your account can see.
 
-## Skill
+## Skills
 
-The plugin ships one skill, `atlas`, which teaches Claude how the server is meant to be used: how to find a resource, when to ask an agent, read an ontology or write SQL, and the order in which a pipeline is built. Claude loads it on its own; you can also call it with `/gwenlake:atlas`.
+The plugin ships three skills that teach Claude how the server is meant to be used. Claude loads the one that matches your request; you can also call one by name.
 
-The skills that teach an agent to build on Atlas with the API (applications, ontologies) are a separate plugin, `gwenlake-skills`, in the [same repository](https://github.com/gwenlake/skills).
+| Skill | What it teaches |
+| --- | --- |
+| `/gwenlake:atlas` | Finding a resource, choosing between an agent, an ontology and SQL to answer a question, and the order in which a pipeline is built |
+| `/gwenlake:atlas-ontologies` | Designing an ontology that matches the data of a project: profiling the tables in SQL, the format the platform accepts, object types, links and actions |
+| `/gwenlake:atlas-applications` | Building, validating and publishing an Atlas application: the `app.yaml` format, the fifteen widgets, the layout |
+
+The skills hold instructions and examples only. They run no script and need no API key: everything goes through the MCP server, with your account.
 
 ## Privacy
 

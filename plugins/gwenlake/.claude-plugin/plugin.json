@@ -1,7 +1,7 @@
 {
   "name": "gwenlake",
-  "description": "Connect Claude to Gwenlake Atlas: search the catalog, query datasets in SQL, read ontologies and documents, ask agents and follow builds, through the Gwenlake MCP server and a skill that teaches how to use it",
-  "version": "1.3.0",
+  "description": "Connect Claude to Gwenlake Atlas through the Gwenlake MCP server: search the catalog, query datasets in SQL, read documents, ask agents, follow builds, design ontologies and build applications, with the skills that teach how",
+  "version": "2.0.0",
   "author": {
     "name": "Gwenlake",
     "url": "https://gwenlake.com"

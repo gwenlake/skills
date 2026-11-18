@@ -10,13 +10,13 @@ How to read a profile and turn it into decisions. The format is in `format.md`; 
 - [Tables without a key](#tables-without-a-key)
 - [Many-to-many and edge datasets](#many-to-many-and-edge-datasets)
 - [Designing actions](#designing-actions)
-- [Refining the draft](#refining-the-draft)
+- [From the profile to the document](#from-the-profile-to-the-document)
 - [Standard ontologies](#standard-ontologies)
 - [Keeping the ontology true](#keeping-the-ontology-true)
 
 ## What the profile tells you
 
-`atlas_ontology.py profile <project> -o profile.json` reads every tabular dataset of the project with SQL and prints, for each:
+A profile is what the queries of *Profiling with SQL* in `SKILL.md` tell you about each tabular dataset of the project. Written down for one table, it reads:
 
 ```
 ## shop.contacts  (iceberg, 1842 rows)  res.dataset.…
@@ -52,7 +52,7 @@ At the end:
 
 Each line is a column of one table (left) whose values are the key of another (right): a link from the right-hand table (source, the "one") to the left-hand one (target, the "many"), backed by the left-hand column. The share says how many of the distinct values exist on the other side.
 
-The script finds a reference when the column's name matches the key's (`contact_id` ↔ `contact_id`, `contact` ↔ `contacts.id`). A foreign key under an unrelated name (`payer` holding a contact id) is not found: look at the samples and the descriptions, and test a suspicion with SQL —
+Matching names find most references (`contact_id` ↔ `contact_id`, `contact` ↔ `contacts.id`). A foreign key under an unrelated name (`payer` holding a contact id) is not found that way: look at the samples and the descriptions, and test a suspicion with SQL —
 
 ```sql
 SELECT count(*) FROM (SELECT DISTINCT payer FROM 'shop.invoices') i
@@ -170,30 +170,27 @@ Numeric guards come from the profile's ranges (`amount greater_than 0`), members
 
 **Do not** model as actions what the pipeline does (loading, recomputing): actions are what people and agents decide. And ask before adding any: propose the candidates with their rule, and declare the ones the user confirms.
 
-## Refining the draft
+## From the profile to the document
 
-`atlas_ontology.py draft profile.json -o ontology.json` writes a first ontology mechanically: one object type per table that has a key (named from the table's slug, described from the table's description, bound to it), every scalar column as a property with the values of categorical columns in its description, and one link per reference found. It is a starting point that is right about the data and naive about the domain. Go through it:
+Write a first version that is right about the data: one object type per table that has a key (bound to it), every meaningful scalar column as a property with the values of categorical columns in its description, and one link per reference found. Then make it right about the domain:
 
 1. **Remove** the object types that are not part of the domain (technical tables), and the links that named them.
-2. **Rename** object types to business names, singular. Renaming an object type means renaming it in every link's ends.
-3. **Check the primary key** the draft picked (the first candidate) against the others.
-4. **Rewrite descriptions**: what one instance is. Describe the properties whose name is not self-explanatory, and the units of measures.
+2. **Name** object types in business terms, singular. Renaming an object type means renaming it in every link's ends.
+3. **Check the primary key** you picked against the other candidates.
+4. **Write descriptions**: what one instance is. Describe the properties whose name is not self-explanatory, and the units of measures.
 5. **Decide each categorical column** (subtypes, link, description), as above.
-6. **Rename links** to something that reads from source to target (`contact_invoice_lines`, `account_children`), give them a `display_name` (`is invoiced`, `has sub-account`), and check each direction.
-7. **Drop properties** that are technical (load timestamps, file names) or always null — the draft already skips the latter.
-8. Set `api_name`, `name`, `version`, `description` of the ontology itself.
-9. Add the actions the user wants (the draft has none): see [Designing actions](#designing-actions).
+6. **Name links** so they read from source to target (`contact_invoice_lines`, `account_children`), give them a `display_name` (`is invoiced`, `has sub-account`), and check each direction.
+7. **Drop properties** that are technical (load timestamps, file names) or always null.
+8. Set `api_name`, `name` and `description` of the ontology itself.
+9. Add the actions the user wants: see [Designing actions](#designing-actions).
 
-Then `check`. The draft passes `check` as it comes; your edits are what can break it.
+Then run the checks of `SKILL.md` again: your edits are what can break a model that was right.
 
 ## Standard ontologies
 
 The platform ships twenty read-only ontologies describing domains without any binding — `general`, `business`, `finance`, `financial_analysis`, `accounting`, `insurance`, `legal`, `healthcare`, `human_resources`, `marketing`, `real_estate`, `supply_chain`, `maritime`, `energy`, `environment`, `esg`, `research`, `cyber`, `security`, `geopolitics`. Their ids are `res.ontology.standard-<name>`.
 
-```bash
-python scripts/atlas_ontology.py list --standard
-python scripts/atlas_ontology.py get res.ontology.standard-accounting -o accounting.json
-```
+List them with `list_ontologies` (they carry `is_standard`) and read one with `get_ontology("res.ontology.standard-accounting")`.
 
 They are vocabularies: object types with subtypes, and typed links, no properties. Use the one closest to the user's domain as a source of names — if `accounting` calls it `ledger_account` and `supply_chain` calls it `shipment`, prefer those words — and of links you might have missed. Do not copy one wholesale: an ontology of the project holds what the project's data holds.
 
@@ -202,7 +199,7 @@ They are vocabularies: object types with subtypes, and typed links, no propertie
 An ontology is checked at one moment; the data moves on.
 
 - **A new value appears** in a categorical column (a fifth contact type): the subtypes and the description are stale. Re-profile, compare, update.
-- **A column is renamed or dropped**: every read of the object type fails. `verify <id>` shows it; `check` on the saved definition says which property.
-- **A table is rebuilt with duplicates**: the key stops being unique. `check` catches it.
+- **A column is renamed or dropped**: every read of the object type fails. `list_ontology_objects` shows it, and its error names the column.
+- **A table is rebuilt with duplicates**: the key stops being unique. The primary-key query catches it.
 
-When asked to update an ontology, fetch it (`get <id> --editable -o ontology.json`), re-profile the tables it is bound to, apply the differences, bump `version`, `check`, `update`, `verify`. Offer the user to run the same check periodically rather than assuming the model stays true.
+When asked to update an ontology, read it with `get_ontology`, re-profile the tables it is bound to, apply the differences, run the checks, call `update_ontology`, read back. Offer the user to run the same check periodically rather than assuming the model stays true.

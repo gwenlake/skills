@@ -288,4 +288,4 @@ The platform's validation checks the references inside `props` (`source`, `bind`
 | `must be one of: …` | a value outside an enumeration (`format`, `view`) |
 | a data error in the card | the source reads but the field does not exist, or the viewer cannot read the dataset |
 
-`scripts/atlas_app.py validate` reports these problems before the save.
+`validate_application` does not report these problems: check each widget against this file before the save.

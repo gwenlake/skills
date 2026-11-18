@@ -1,63 +1,48 @@
-# Skills
+# Gwenlake for Claude
 
-Skills are folders of instructions, scripts and resources that an agent loads when a task calls for them. This repository holds the skills that teach agents how to build on [Gwenlake Atlas](https://docs.gwenlake.com/atlas/), so that a new agent does the work correctly without being told again how the platform works.
+This repository holds the Claude plugin for [Gwenlake Atlas](https://docs.gwenlake.com/atlas/): the Gwenlake MCP server, and the skills that teach Claude how to use it.
 
-Each skill is self-contained in its own folder, with a `SKILL.md` file holding the metadata and the instructions, in the [Agent Skills](https://agentskills.io) convention.
-
-## Disclaimer
-
-**These skills are provided for demonstration and educational purposes only.** While they describe how Gwenlake Atlas works, the platform evolves, and the behavior you get from the platform or from an agent using these skills may differ from what is shown here. These skills are meant to illustrate patterns and possibilities. Always test skills thoroughly in your own environment before relying on them for critical tasks.
-
-# Skill sets
-
-- [./skills](./skills): the skills
+- [./plugins/gwenlake](./plugins/gwenlake): the plugin
 - [./template](./template): a starting point for a new skill
+
+## What is in the plugin
+
+**The MCP server** (`https://atlas.gwenlake.com/mcp`) signs you in with your Gwenlake account. Claude then sees what your account can see: it searches the catalog, queries datasets in SQL, reads ontologies and documents, asks agents and follows builds. Where your plan allows it, it also creates datasets, transforms, schedules, ontologies and applications.
+
+**The skills** are folders of instructions and examples, in the [Agent Skills](https://agentskills.io) convention, that Claude loads when a task calls for them.
 
 | Skill | What it teaches |
 | --- | --- |
-| [`atlas-api`](./skills/atlas-api) | Calling the Atlas API over HTTP, from the `gwenlake` Python library or from the command line: authentication, datasets and files, SQL, builds and schedules, inference, agents. With a script that makes any call, runs SQL and uploads files |
-| [`atlas-applications`](./skills/atlas-applications) | Building, validating and publishing Atlas applications: the `app.yaml` format, the fifteen widgets, the layout, the API. With a script that explores the data, validates and saves |
-| [`atlas-ontologies`](./skills/atlas-ontologies) | Designing an ontology that matches the data of a project: the format the platform accepts, object types, links and actions. With a script that profiles the tables (schema, keys, values, references), drafts the ontology, checks it against the data and publishes it |
+| [`atlas`](./plugins/gwenlake/skills/atlas) | Finding a resource, choosing between an agent, an ontology and SQL to answer a question, and the order in which a pipeline is built |
+| [`atlas-ontologies`](./plugins/gwenlake/skills/atlas-ontologies) | Designing an ontology that matches the data of a project: profiling the tables in SQL, the format the platform accepts, object types, links and actions |
+| [`atlas-applications`](./plugins/gwenlake/skills/atlas-applications) | Building, validating and publishing Atlas applications: the `app.yaml` format, the fifteen widgets, the layout |
 
-# Try in Claude Code, Claude.ai, and the API
+The skills run no script and need no API key: everything goes through the MCP server.
 
-## Claude Code
-
-This repository is a Claude Code plugin marketplace with two plugins:
-
-| Plugin | What it brings |
-| --- | --- |
-| [`gwenlake`](./plugins/gwenlake) | The Gwenlake MCP server (`https://atlas.gwenlake.com/mcp`): Claude searches the catalog, queries datasets in SQL, reads ontologies and documents, asks agents and follows builds. With the [`atlas`](./plugins/gwenlake/skills/atlas) skill, which teaches Claude how to use the server |
-| `gwenlake-skills` | The skills listed above |
-
-Install either one, or both:
+## Install in Claude Code
 
 ```
 /plugin install gwenlake --marketplace gwenlake/skills
-/plugin install gwenlake-skills --marketplace gwenlake/skills
 ```
 
 Or register the marketplace with `/plugin marketplace add gwenlake/skills`, then select `Browse and install plugins`.
 
-After installing:
-
-- `gwenlake` signs you in with your Gwenlake account: run `/mcp`, select `gwenlake` and choose `Authenticate`. No API key is involved.
-- `gwenlake-skills` calls the Atlas API, so Claude Code needs an API key to reach your platform: set `GWENLAKE_API_KEY`, or create a profile in `~/.gwenlake/credentials`.
+Then sign in: run `/mcp`, select `gwenlake` and choose `Authenticate`.
 
 You do not have to name a skill: Claude loads the one that matches your request. Just ask for what you want:
 
 | You ask | Skill loaded |
 | --- | --- |
+| "What was the revenue by region last quarter in the `sales` project?" | `atlas` |
 | "Create the ontology of the `sales` project in Atlas" | `atlas-ontologies` |
 | "Build an Atlas application over the `sales/orders` dataset, with a filter by region and the monthly revenue" | `atlas-applications` |
-| "Export the `sales.customers` dataset of Atlas to a Parquet file" | `atlas-api` |
 
-To be sure a given skill is used, name it in your request: "Use the `atlas-ontologies` skill to create the ontology of the `sales` project", or call it directly with `/gwenlake-skills:atlas-ontologies`.
+To be sure a given skill is used, name it in your request, or call it directly, for example `/gwenlake:atlas-ontologies`.
 
-## Claude.ai
+## Upgrading from version 1
 
-To use a skill from this repository in Claude.ai, zip its folder and upload it as a custom skill by following the instructions in [Using skills in Claude](https://support.claude.com/en/articles/12512180-using-skills-in-claude#h_a4222fa77b).
+Version 1 shipped a second plugin, `gwenlake-skills`, whose skills called the Atlas API with Python scripts and an API key. Version 2 replaces it: the skills now use the MCP server. Uninstall `gwenlake-skills` and install `gwenlake`. The `atlas-api` skill is gone; calling the API directly is documented at https://docs.gwenlake.com/atlas/.
 
-## Claude API
+## Disclaimer
 
-You can upload a skill of this repository through the Skills API. See the [Skills API Quickstart](https://docs.claude.com/en/api/skills-guide#creating-a-skill) for more.
+**These skills are provided for demonstration and educational purposes only.** While they describe how Gwenlake Atlas works, the platform evolves, and the behavior you get from the platform or from an agent using these skills may differ from what is shown here. Always test skills thoroughly in your own environment before relying on them for critical tasks.

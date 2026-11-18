@@ -1,6 +1,6 @@
 ---
 name: atlas
-description: "Work with Gwenlake Atlas through the Gwenlake MCP server: find a project, dataset, ontology, document store or agent, answer questions about data in SQL, traverse an ontology, search documents, check lineage and builds, and build a pipeline (dataset, SQL query or code, transform, build, schedule). Use whenever the user asks about their Atlas or Gwenlake data, or wants something created or run on the platform."
+description: "Work with Gwenlake Atlas through the Gwenlake MCP server: find a project, dataset, ontology, document store or agent, answer questions about data in SQL, traverse an ontology, search documents, check lineage and builds, and build a pipeline (dataset, SQL query or code, transform, build, schedule). Start here for anything on Atlas; ontologies and applications have their own skills. Use whenever the user asks about their Atlas or Gwenlake data, or wants something created or run on the platform."
 ---
 
 # Gwenlake Atlas through the MCP server
@@ -72,6 +72,10 @@ Each step needs the id returned by the previous one.
 
 **A trained model**: create the model first with `create_model(project_id, name, repository_id, path)`, in the same repository as the training code, then push the code whose `@train` names it. The other order registers nothing.
 
+**An ontology**: `create_ontology` and `update_ontology`, after profiling the data in SQL. The `atlas-ontologies` skill holds the format and the method; load it first.
+
+**An application** (a dashboard or a screen): one `app.yaml`, checked with `validate_application`, then published with `create_application` or `update_application`. The `atlas-applications` skill holds the format and the widgets; load it first.
+
 **An agent**: `create_agent(project_id, name, instructions, resource_ids=[…])`, then try it with `ask_agent`. The bound resources must be in the same project. Check `tool_warnings` in `get_agent`.
 
 ### Traps
@@ -80,8 +84,9 @@ Each step needs the id returned by the previous one.
 - **Same project everywhere.** Transform, output, inputs and query must share a project.
 - **`push_repository_files` writes whole files.** Read the current content first, or the rest of the file is lost. A file returned with `truncated: true` must not be rewritten from what was shown. The branch must already exist; prefer a working branch to the default one.
 - **`run_build` overwrites the target** on the branch given, and `main` is what everyone reads. Use a named data branch for anything exploratory. By default it also rebuilds what is stale upstream; `target_only=true` builds the one node.
+- **`update_ontology` replaces each collection it is given**, and `update_application` replaces the whole definition. Read the current version first and send it back complete.
 - **A schedule keeps acting after the conversation.** `time_zone` is an IANA name such as `Europe/Paris`, not an offset.
 
 ## What the MCP server does not do
 
-It does not upload data, index a mediaset, or create ontologies, applications, connections or syncs. Those are done in the Atlas interface or with the API, documented at https://docs.gwenlake.com/atlas/.
+It does not upload data, index a mediaset, create connections or syncs, or delete anything. Those are done in the Atlas interface or with the API, documented at https://docs.gwenlake.com/atlas/.
