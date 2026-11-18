@@ -39,9 +39,9 @@ You do not have to name a skill: Claude loads the one that matches your request.
 
 To be sure a given skill is used, name it in your request, or call it directly, for example `/gwenlake-atlas:atlas-ontologies`.
 
-## Upgrading from version 1
+## Coming from the earlier plugins
 
-Version 1 shipped a second plugin, `gwenlake-skills`, whose skills called the Atlas API with Python scripts and an API key. Version 2 replaces it: the skills now use the MCP server. Uninstall `gwenlake-skills` and install `gwenlake-atlas`. The `atlas-api` skill is gone; calling the API directly is documented at https://docs.gwenlake.com/atlas/.
+This repository used to ship two plugins, `gwenlake` and `gwenlake-skills`, whose skills called the Atlas API with Python scripts and an API key. `gwenlake-atlas` replaces both: the skills now use the MCP server. Uninstall the earlier plugins and install `gwenlake-atlas`. The `atlas-api` skill is gone; calling the API directly is documented at https://docs.gwenlake.com/atlas/.
 
 ## Disclaimer
 
