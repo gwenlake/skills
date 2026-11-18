@@ -42,7 +42,12 @@ Alternatively, directly install the plugin via:
 /plugin install gwenlake-skills@gwenlake
 ```
 
-After installing the plugin, Claude Code needs an API key to reach your platform: set `GWENLAKE_API_KEY`, or create a profile in `~/.gwenlake/credentials`.
+The plugin brings two things:
+
+- the **skills** listed above. They call the Atlas API, so Claude Code needs an API key to reach your platform: set `GWENLAKE_API_KEY`, or create a profile in `~/.gwenlake/credentials`.
+- the **Gwenlake MCP server** (`https://atlas.gwenlake.com/mcp`), which lets Claude search the catalog, query datasets in SQL, read ontologies and documents, ask agents and follow builds. It signs you in with your Gwenlake account: run `/mcp`, select `gwenlake` and choose `Authenticate`. No API key is involved.
+
+If your platform has its own address, set `GWENLAKE_MCP_URL` to its MCP endpoint before starting Claude Code (for instance `https://<your-domain>/api/v1/mcp`).
 
 You do not have to name a skill: Claude loads the one that matches your request. Just ask for what you want:
 
