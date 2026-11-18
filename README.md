@@ -29,17 +29,17 @@ You can register this repository as a Claude Code Plugin marketplace by running 
 /plugin marketplace add gwenlake/skills
 ```
 
-Then, to install the skills:
+Then, to install the plugin:
 
 1. Select `Browse and install plugins`
-2. Select `gwenlake`
-3. Select `gwenlake-skills`
+2. Select the `gwenlake` marketplace
+3. Select the `gwenlake` plugin
 4. Select `Install now`
 
 Alternatively, directly install the plugin via:
 
 ```
-/plugin install gwenlake-skills@gwenlake
+/plugin install gwenlake@gwenlake
 ```
 
 The plugin brings two things:
@@ -57,7 +57,7 @@ You do not have to name a skill: Claude loads the one that matches your request.
 | "Build an Atlas application over the `sales/orders` dataset, with a filter by region and the monthly revenue" | `atlas-applications` |
 | "Export the `sales.customers` dataset of Atlas to a Parquet file" | `atlas-api` |
 
-To be sure a given skill is used, name it in your request: "Use the `atlas-ontologies` skill to create the ontology of the `sales` project", or call it directly with `/gwenlake-skills:atlas-ontologies`.
+To be sure a given skill is used, name it in your request: "Use the `atlas-ontologies` skill to create the ontology of the `sales` project", or call it directly with `/gwenlake:atlas-ontologies`.
 
 ## Claude.ai
 

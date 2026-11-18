@@ -9,7 +9,7 @@
   },
   "plugins": [
     {
-      "name": "gwenlake-skills",
+      "name": "gwenlake",
       "description": "Gwenlake Atlas for agents: the catalog MCP server (datasets, SQL, ontologies, documents, agents, pipelines) and the skills to call the API, build declarative applications (app.yaml), and design ontologies from the data of a project",
       "source": "./",
       "strict": false,
