@@ -27,7 +27,7 @@ This repository is a Claude Code plugin marketplace with two plugins:
 
 | Plugin | What it brings |
 | --- | --- |
-| [`gwenlake`](./plugins/gwenlake) | The Gwenlake MCP server (`https://atlas.gwenlake.com/mcp`): Claude searches the catalog, queries datasets in SQL, reads ontologies and documents, asks agents and follows builds |
+| [`gwenlake`](./plugins/gwenlake) | The Gwenlake MCP server (`https://atlas.gwenlake.com/mcp`): Claude searches the catalog, queries datasets in SQL, reads ontologies and documents, asks agents and follows builds. With the [`atlas`](./plugins/gwenlake/skills/atlas) skill, which teaches Claude how to use the server |
 | `gwenlake-skills` | The skills listed above |
 
 Install either one, or both:
