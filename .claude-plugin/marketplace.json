@@ -5,13 +5,13 @@
   },
   "metadata": {
     "description": "Gwenlake Atlas for Claude: the MCP server and the skills that teach how to use it",
-    "version": "2.0.0"
+    "version": "2.1.0"
   },
   "plugins": [
     {
-      "name": "gwenlake",
+      "name": "gwenlake-atlas",
       "description": "Connect Claude to Gwenlake Atlas through the Gwenlake MCP server, with the skills that teach how to use it: catalog search, SQL over datasets, documents, agents and builds, designing ontologies and building applications",
-      "source": "./plugins/gwenlake"
+      "source": "./plugins/gwenlake-atlas"
     }
   ]
 }

@@ -7,7 +7,7 @@ With it, Claude can search the catalog of your organization, describe and query 
 ## Install
 
 ```
-/plugin install gwenlake --marketplace gwenlake/skills
+/plugin install gwenlake-atlas --marketplace gwenlake/skills
 ```
 
 ## Sign in
@@ -20,9 +20,9 @@ The plugin ships three skills that teach Claude how the server is meant to be us
 
 | Skill | What it teaches |
 | --- | --- |
-| `/gwenlake:atlas` | Finding a resource, choosing between an agent, an ontology and SQL to answer a question, and the order in which a pipeline is built |
-| `/gwenlake:atlas-ontologies` | Designing an ontology that matches the data of a project: profiling the tables in SQL, the format the platform accepts, object types, links and actions |
-| `/gwenlake:atlas-applications` | Building, validating and publishing an Atlas application: the `app.yaml` format, the fifteen widgets, the layout |
+| `/gwenlake-atlas:atlas` | Finding a resource, choosing between an agent, an ontology and SQL to answer a question, and the order in which a pipeline is built |
+| `/gwenlake-atlas:atlas-ontologies` | Designing an ontology that matches the data of a project: profiling the tables in SQL, the format the platform accepts, object types, links and actions |
+| `/gwenlake-atlas:atlas-applications` | Building, validating and publishing an Atlas application: the `app.yaml` format, the fifteen widgets, the layout |
 
 The skills hold instructions and examples only. They run no script and need no API key: everything goes through the MCP server, with your account.
 

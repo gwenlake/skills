@@ -2,7 +2,7 @@
 
 This repository holds the Claude plugin for [Gwenlake Atlas](https://docs.gwenlake.com/atlas/): the Gwenlake MCP server, and the skills that teach Claude how to use it.
 
-- [./plugins/gwenlake](./plugins/gwenlake): the plugin
+- [./plugins/gwenlake-atlas](./plugins/gwenlake-atlas): the plugin
 - [./template](./template): a starting point for a new skill
 
 ## What is in the plugin
@@ -13,16 +13,16 @@ This repository holds the Claude plugin for [Gwenlake Atlas](https://docs.gwenla
 
 | Skill | What it teaches |
 | --- | --- |
-| [`atlas`](./plugins/gwenlake/skills/atlas) | Finding a resource, choosing between an agent, an ontology and SQL to answer a question, and the order in which a pipeline is built |
-| [`atlas-ontologies`](./plugins/gwenlake/skills/atlas-ontologies) | Designing an ontology that matches the data of a project: profiling the tables in SQL, the format the platform accepts, object types, links and actions |
-| [`atlas-applications`](./plugins/gwenlake/skills/atlas-applications) | Building, validating and publishing Atlas applications: the `app.yaml` format, the fifteen widgets, the layout |
+| [`atlas`](./plugins/gwenlake-atlas/skills/atlas) | Finding a resource, choosing between an agent, an ontology and SQL to answer a question, and the order in which a pipeline is built |
+| [`atlas-ontologies`](./plugins/gwenlake-atlas/skills/atlas-ontologies) | Designing an ontology that matches the data of a project: profiling the tables in SQL, the format the platform accepts, object types, links and actions |
+| [`atlas-applications`](./plugins/gwenlake-atlas/skills/atlas-applications) | Building, validating and publishing Atlas applications: the `app.yaml` format, the fifteen widgets, the layout |
 
 The skills run no script and need no API key: everything goes through the MCP server.
 
 ## Install in Claude Code
 
 ```
-/plugin install gwenlake --marketplace gwenlake/skills
+/plugin install gwenlake-atlas --marketplace gwenlake/skills
 ```
 
 Or register the marketplace with `/plugin marketplace add gwenlake/skills`, then select `Browse and install plugins`.
@@ -37,11 +37,11 @@ You do not have to name a skill: Claude loads the one that matches your request.
 | "Create the ontology of the `sales` project in Atlas" | `atlas-ontologies` |
 | "Build an Atlas application over the `sales/orders` dataset, with a filter by region and the monthly revenue" | `atlas-applications` |
 
-To be sure a given skill is used, name it in your request, or call it directly, for example `/gwenlake:atlas-ontologies`.
+To be sure a given skill is used, name it in your request, or call it directly, for example `/gwenlake-atlas:atlas-ontologies`.
 
 ## Upgrading from version 1
 
-Version 1 shipped a second plugin, `gwenlake-skills`, whose skills called the Atlas API with Python scripts and an API key. Version 2 replaces it: the skills now use the MCP server. Uninstall `gwenlake-skills` and install `gwenlake`. The `atlas-api` skill is gone; calling the API directly is documented at https://docs.gwenlake.com/atlas/.
+Version 1 shipped a second plugin, `gwenlake-skills`, whose skills called the Atlas API with Python scripts and an API key. Version 2 replaces it: the skills now use the MCP server. Uninstall `gwenlake-skills` and install `gwenlake-atlas`. The `atlas-api` skill is gone; calling the API directly is documented at https://docs.gwenlake.com/atlas/.
 
 ## Disclaimer
 
