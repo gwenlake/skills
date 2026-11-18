@@ -4,26 +4,25 @@
     "name": "Gwenlake"
   },
   "metadata": {
-    "description": "Skills and MCP server for building on Gwenlake Atlas",
-    "version": "1.1.0"
+    "description": "Gwenlake Atlas for agents: the MCP server and the skills",
+    "version": "1.2.0"
   },
   "plugins": [
     {
       "name": "gwenlake",
-      "description": "Gwenlake Atlas for agents: the catalog MCP server (datasets, SQL, ontologies, documents, agents, pipelines) and the skills to call the API, build declarative applications (app.yaml), and design ontologies from the data of a project",
+      "description": "Connect Claude to Gwenlake Atlas through the Gwenlake MCP server: catalog search, SQL over datasets, ontologies, documents, agents and builds",
+      "source": "./plugins/gwenlake"
+    },
+    {
+      "name": "gwenlake-skills",
+      "description": "Skills for Gwenlake Atlas: call the API, build declarative applications (app.yaml), and design ontologies from the data of a project",
       "source": "./",
       "strict": false,
       "skills": [
         "./skills/atlas-api",
         "./skills/atlas-applications",
         "./skills/atlas-ontologies"
-      ],
-      "mcpServers": {
-        "gwenlake": {
-          "type": "http",
-          "url": "${GWENLAKE_MCP_URL:-https://atlas.gwenlake.com/mcp}"
-        }
-      }
+      ]
     }
   ]
 }

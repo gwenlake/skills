@@ -23,31 +23,26 @@ Each skill is self-contained in its own folder, with a `SKILL.md` file holding t
 
 ## Claude Code
 
-You can register this repository as a Claude Code Plugin marketplace by running the following command in Claude Code:
+This repository is a Claude Code plugin marketplace with two plugins:
+
+| Plugin | What it brings |
+| --- | --- |
+| [`gwenlake`](./plugins/gwenlake) | The Gwenlake MCP server (`https://atlas.gwenlake.com/mcp`): Claude searches the catalog, queries datasets in SQL, reads ontologies and documents, asks agents and follows builds |
+| `gwenlake-skills` | The skills listed above |
+
+Install either one, or both:
 
 ```
-/plugin marketplace add gwenlake/skills
+/plugin install gwenlake --marketplace gwenlake/skills
+/plugin install gwenlake-skills --marketplace gwenlake/skills
 ```
 
-Then, to install the plugin:
+Or register the marketplace with `/plugin marketplace add gwenlake/skills`, then select `Browse and install plugins`.
 
-1. Select `Browse and install plugins`
-2. Select the `gwenlake` marketplace
-3. Select the `gwenlake` plugin
-4. Select `Install now`
+After installing:
 
-Alternatively, directly install the plugin via:
-
-```
-/plugin install gwenlake@gwenlake
-```
-
-The plugin brings two things:
-
-- the **skills** listed above. They call the Atlas API, so Claude Code needs an API key to reach your platform: set `GWENLAKE_API_KEY`, or create a profile in `~/.gwenlake/credentials`.
-- the **Gwenlake MCP server** (`https://atlas.gwenlake.com/mcp`), which lets Claude search the catalog, query datasets in SQL, read ontologies and documents, ask agents and follow builds. It signs you in with your Gwenlake account: run `/mcp`, select `gwenlake` and choose `Authenticate`. No API key is involved.
-
-If your platform has its own address, set `GWENLAKE_MCP_URL` to its MCP endpoint before starting Claude Code (for instance `https://<your-domain>/api/v1/mcp`).
+- `gwenlake` signs you in with your Gwenlake account: run `/mcp`, select `gwenlake` and choose `Authenticate`. No API key is involved.
+- `gwenlake-skills` calls the Atlas API, so Claude Code needs an API key to reach your platform: set `GWENLAKE_API_KEY`, or create a profile in `~/.gwenlake/credentials`.
 
 You do not have to name a skill: Claude loads the one that matches your request. Just ask for what you want:
 
@@ -57,7 +52,7 @@ You do not have to name a skill: Claude loads the one that matches your request.
 | "Build an Atlas application over the `sales/orders` dataset, with a filter by region and the monthly revenue" | `atlas-applications` |
 | "Export the `sales.customers` dataset of Atlas to a Parquet file" | `atlas-api` |
 
-To be sure a given skill is used, name it in your request: "Use the `atlas-ontologies` skill to create the ontology of the `sales` project", or call it directly with `/gwenlake:atlas-ontologies`.
+To be sure a given skill is used, name it in your request: "Use the `atlas-ontologies` skill to create the ontology of the `sales` project", or call it directly with `/gwenlake-skills:atlas-ontologies`.
 
 ## Claude.ai
 
