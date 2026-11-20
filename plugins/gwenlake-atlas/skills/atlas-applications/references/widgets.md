@@ -8,6 +8,7 @@ Every widget type an Atlas application can hold, with what it reads, how it beha
 - [Shared props](#shared-props)
 - [Filters](#filters): `filter.select`, `filter.text`, `filter.number`, `filter.date`, `filter.toggle`
 - [Indicator](#indicator-kpi): `kpi`
+- [Ranking](#ranking)
 - [Table](#table)
 - [Charts](#charts): `chart.bar`, `chart.line`, `chart.area`, `chart.pie`
 - [Map](#map)
@@ -42,7 +43,7 @@ A widget is read again when a state variable it depends on changes: one its prop
 | `bind` | `state.<id>`: the variable the widget reads and writes |
 | `label`, `title` | a text displayed with the widget; may hold `${state.<id>}` |
 | `color` | a color: a palette name or a hex color in quotes |
-| `background` | the background of the widget's card. Accepted by `kpi`, `table`, the charts and `map` |
+| `background` | the background of the widget's card. Accepted by `kpi`, `ranking`, `table`, the charts and `map` |
 
 An **aggregate** is `sum`, `avg`, `min`, `max` or `count` applied to one field of the source, written `sum(montant)`; `count(*)` counts the rows. The field is a plain column name (letters, digits, underscores). Anything else — a product, a ratio, `count(distinct …)` — is computed in a `query` source and read back with a plain aggregate.
 
@@ -132,6 +133,40 @@ widgets:
     props: { source: ratios, value: max(taux_marge), format: percent, label: Taux de marge }
 ```
 
+## Ranking
+
+| Props | |
+| --- | --- |
+| `source`\*, `name`\*, `value`\*, `title`, `order`, `limit`, `format`, `color`, `background`, `filter` | the best or the worst rows of a source: one line per row, with its name, its value and a small colored mark |
+
+- `name` is the field that names each row, `value` the field the rows are ranked by. A row without a value is not ranked.
+- `order`: `top` (default) lists the highest values first, with a rising mark, in green; `bottom` the lowest first, with a falling mark, in red.
+- `limit` is the number of rows listed: 5 when absent, 50 at most. `format` is `number` (default), `eur` or `percent`.
+- `color` replaces the green or the red, for a ranking where the lowest value is the best one.
+- A ranking lists the rows of its source as they are: to rank an aggregate, give it a `query` source that computes it.
+
+The best and the worst are two widgets on the same source, side by side in a row:
+
+```yaml
+sources:
+  performances:
+    query: |
+      select producteur, avg(variation) as variation
+      from ${sources.activite}
+      group by producteur
+layout:
+  row:
+    - meilleurs: 1
+    - pires: 1
+widgets:
+  meilleurs:
+    type: ranking
+    props: { title: Meilleures performances, source: performances, name: producteur, value: variation, format: percent }
+  pires:
+    type: ranking
+    props: { title: Pires performances, source: performances, name: producteur, value: variation, format: percent, order: bottom }
+```
+
 ## Table
 
 | Props | |
@@ -148,9 +183,9 @@ widgets:
 
 | Type | Props | |
 | --- | --- | --- |
-| `chart.bar` | `source`\*, `x`\*, `y`\*, `title`, `color`, `baseline`, `background`, `filter` | one bar per row: `x` the field of the categories, `y` the field of the values |
-| `chart.line` | `source`\*, `x`\*, `y`\*, `title`, `color`, `fill`, `baseline`, `background`, `filter` | a trend along `x` |
-| `chart.area` | `source`\*, `x`\*, `y`\*, `title`, `color`, `baseline`, `background`, `filter` | a trend where the magnitude matters: a line that is always filled |
+| `chart.bar` | `source`\*, `x`\*, `y`\*, `title`, `color`, `labels`, `baseline`, `scale`, `min`, `max`, `missing`, `background`, `filter` | one bar per row: `x` the field of the categories, `y` the field of the values |
+| `chart.line` | `source`\*, `x`\*, `y`\*, `title`, `color`, `fill`, `points`, `baseline`, `scale`, `min`, `max`, `missing`, `background`, `filter` | a trend along `x` |
+| `chart.area` | `source`\*, `x`\*, `y`\*, `title`, `color`, `baseline`, `scale`, `min`, `max`, `missing`, `background`, `filter` | a trend where the magnitude matters: a line that is always filled |
 | `chart.pie` | `source`\*, `category`\*, `value`\* (an aggregate), `title`, `color`, `background`, `filter` | the share of each value of `category`, in shades of one color |
 
 **Bar, line and area draw the rows of their source as they are** — one mark per row, the first 500 (a note says so when there are more), in the order the source returns them. One series per chart: one `y`. So:
@@ -192,6 +227,32 @@ widgets:
     type: chart.line
     props: { source: marge_mensuelle, x: mois, y: marge, color: green, fill: true, baseline: 100 }
 ```
+
+**Labels on the bars.** `labels: true` on a `chart.bar` writes the value of each bar above it, in the compact form of the axis (`1.1K`, `125K`); under the bar when the value is negative. Use it on a chart of a few bars: on many narrow bars the labels run into each other.
+
+**Points on a line.** A `chart.line` draws a round mark on each value while the curve has 40 values or fewer, and the curve alone beyond that. `points: false` never draws the marks, `points: true` always does.
+
+**Scale of the value axis.** The value axis of a `chart.bar`, a `chart.line` or a `chart.area` starts at zero.
+
+| Prop | |
+| --- | --- |
+| `scale` | `zero` (default): the axis starts at zero. `auto`: the axis is fitted to the values, so a series that moves between 96 and 110 is drawn between those |
+| `min` | a number: the axis starts exactly there |
+| `max` | a number: the axis ends exactly there |
+
+`min` and `max` are independent: give one, and the other side keeps following `scale`. A fixed bound wins over `scale` and over `baseline`; values beyond it are cut at the edge of the chart. A `min` that is not under the `max` is ignored.
+
+```yaml
+widgets:
+  taux:
+    type: chart.line
+    props: { source: taux_mensuels, x: mois, y: taux, scale: auto }
+  score:
+    type: chart.line
+    props: { source: scores, x: mois, y: score, min: 0, max: 100 }
+```
+
+**Missing values.** A row whose `y` holds no number (a null, an empty text, `NA`, `NaN`) is not drawn as a zero. `missing` says what is drawn instead: `gap` (default) draws nothing, the curve stops and starts again; `connect` joins the values on each side of the hole (a bar is still absent); `zero` draws 0. To put a hole in a series, let the query answer a null for that row.
 
 **Bar colors.** A bar chart without a `color` chooses by what `x` holds: labels (a sector, a country) give each bar its own color, in the order of the palette, which starts again after eight bars; dates or numbers give every bar blue. With a `color`, every bar has that color.
 
@@ -298,6 +359,7 @@ Each type has a natural height, used when the layout gives it none (`auto`, the 
 | --- | --- | --- |
 | filters | their content (about 60 px; a toggle 32) | 60 (toggle 32) |
 | `kpi` | its content | 76 |
+| `ranking` | its content | 120 |
 | `section` | its content | 32 |
 | `divider` | its content | 16 |
 | `text` | its content | 24 |
@@ -318,7 +380,7 @@ The platform's validation checks the references inside `props` (`source`, `bind`
 | `<prop> is not a prop of this widget` | a prop this type does not accept (`title` on a `kpi`: use `label`; `label` on a chart: use `title`; `value` on a `chart.bar`: use `y`) |
 | `<prop> is required` | a required prop is missing |
 | `must be an aggregate such as sum(field)` | an expression where a plain aggregate is expected |
-| `must be one of: …` | a value outside an enumeration (`format`, `view`) |
+| `must be one of: …` | a value outside an enumeration (`format`, `view`, `order`, `scale`, `missing`, `style`) |
 | a data error in the card | the source reads but the field does not exist, or the viewer cannot read the dataset |
 
 `validate_application` does not report these problems: check each widget against this file before the save.

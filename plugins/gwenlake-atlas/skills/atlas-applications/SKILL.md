@@ -199,9 +199,9 @@ A widget has a `type` and `props`. These eighteen types are all there is; `*` ma
 | `kpi` | `source`\*, `value`\* (aggregate), `label`, `format`, `subtitle`, `color`, `background`, `filter` | one headline number. `format`: `number` (default), `eur`, `percent` |
 | `ranking` | `source`\*, `name`\*, `value`\*, `title`, `order`, `limit`, `format`, `color`, `background`, `filter` | the best or the worst rows by a value: `name` is the field naming each row, `value` the field they are ranked by. `order`: `top` (default) or `bottom`; `limit`: 1–50, 5 by default |
 | `table` | `source`\*, `title`, `columns`, `page_size`, `background`, `filter` | the rows of a source, by pages, sortable. `columns`: a list of fields (all when absent); `page_size`: 1–1000, 50 by default |
-| `chart.bar` | `source`\*, `x`\*, `y`\*, `title`, `color`, `baseline`, `background`, `filter` | one bar per row |
-| `chart.line` | `source`\*, `x`\*, `y`\*, `title`, `color`, `fill`, `baseline`, `background`, `filter` | a trend along `x`; `fill: true` fills under the curve |
-| `chart.area` | `source`\*, `x`\*, `y`\*, `title`, `color`, `baseline`, `background`, `filter` | a trend, always filled |
+| `chart.bar` | `source`\*, `x`\*, `y`\*, `title`, `color`, `labels`, `baseline`, `scale`, `min`, `max`, `missing`, `background`, `filter` | one bar per row; `labels: true` writes each value above its bar |
+| `chart.line` | `source`\*, `x`\*, `y`\*, `title`, `color`, `fill`, `points`, `baseline`, `scale`, `min`, `max`, `missing`, `background`, `filter` | a trend along `x`; `fill: true` fills under the curve; `points` forces the round marks on or off |
+| `chart.area` | `source`\*, `x`\*, `y`\*, `title`, `color`, `baseline`, `scale`, `min`, `max`, `missing`, `background`, `filter` | a trend, always filled |
 | `chart.pie` | `source`\*, `category`\*, `value`\* (aggregate), `title`, `color`, `background`, `filter` | the share of each value of `category` |
 | `map` | `source`\*, `lat`\*, `lon`\*, `title`, `label`, `color`, `size`, `view`, `background`, `filter` | one point per row. `label`: the field shown on hover; `size`: 1–40 px; `view`: `map` or `globe` |
 | `section` | `title`, `description`, `divider`, `color` | the heading of a part of the app: a large title, a description under it (Markdown). `divider: true` draws a line above; `color` a colored mark beside the title |
@@ -217,6 +217,8 @@ A widget has a `type` and `props`. These eighteen types are all there is; `*` ma
 - `chart.pie` keeps the eight largest slices and folds the rest into "Other".
 - `format: percent` multiplies by 100: the value must be a ratio (`0.42` shows 42 %). `eur` shows whole euros.
 - A `kpi` without a `label` shows the widget's identifier. Give every KPI a `label` and every chart a `title`.
+- **Value axis of `chart.bar`, `chart.line`, `chart.area`**: it starts at zero. `scale: auto` fits it to the values (a series moving between 96 and 110 is not flattened); `min` and `max` fix a bound. `missing` says how a row without a value is drawn: `gap` (default), `connect` or `zero`. Details in `references/widgets.md`.
+- **`ranking` lists the rows of its source as they are**, like the charts: to rank an aggregate, give it a `query` source that computes it. Best and worst are two `ranking` widgets on the same source, the second with `order: bottom`.
 - **Colors**: a name of the palette — `blue`, `orange`, `aqua`, `yellow`, `magenta`, `green`, `violet`, `red` — which follows light and dark mode, or a hex color **in quotes** (`"#0ea5e9"`: an unquoted `#` starts a YAML comment). `background` also takes `{ light: ..., dark: ... }`. A bar chart without `color` gives each bar its own color when `x` holds labels, blue when it holds dates or numbers.
 - `baseline` (a number) draws a dashed reference line on bar, line and area charts.
 - A `map` reads up to 100 000 rows; past that, aggregate in a `query` (one row per place).
