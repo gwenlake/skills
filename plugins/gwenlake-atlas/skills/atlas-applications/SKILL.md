@@ -187,7 +187,7 @@ A widget `filter` applies to the columns of the widget's source — for a `query
 
 ## Widgets
 
-A widget has a `type` and `props`. These fifteen types are all there is; `*` marks a required prop. An unknown type, an unknown prop or a missing required prop puts an error card in place of the widget.
+A widget has a `type` and `props`. These eighteen types are all there is; `*` marks a required prop. An unknown type, an unknown prop or a missing required prop puts an error card in place of the widget.
 
 | Type | Props | What it shows |
 | --- | --- | --- |
@@ -197,12 +197,15 @@ A widget has a `type` and `props`. These fifteen types are all there is; `*` mar
 | `filter.date` | `bind`\*, `label` | a day, for a `date` (or `string`) variable |
 | `filter.toggle` | `bind`\*, `label` | a switch, for a `boolean` variable |
 | `kpi` | `source`\*, `value`\* (aggregate), `label`, `format`, `subtitle`, `color`, `background`, `filter` | one headline number. `format`: `number` (default), `eur`, `percent` |
+| `ranking` | `source`\*, `name`\*, `value`\*, `title`, `order`, `limit`, `format`, `color`, `background`, `filter` | the best or the worst rows by a value: `name` is the field naming each row, `value` the field they are ranked by. `order`: `top` (default) or `bottom`; `limit`: 1–50, 5 by default |
 | `table` | `source`\*, `title`, `columns`, `page_size`, `background`, `filter` | the rows of a source, by pages, sortable. `columns`: a list of fields (all when absent); `page_size`: 1–1000, 50 by default |
 | `chart.bar` | `source`\*, `x`\*, `y`\*, `title`, `color`, `baseline`, `background`, `filter` | one bar per row |
 | `chart.line` | `source`\*, `x`\*, `y`\*, `title`, `color`, `fill`, `baseline`, `background`, `filter` | a trend along `x`; `fill: true` fills under the curve |
 | `chart.area` | `source`\*, `x`\*, `y`\*, `title`, `color`, `baseline`, `background`, `filter` | a trend, always filled |
 | `chart.pie` | `source`\*, `category`\*, `value`\* (aggregate), `title`, `color`, `background`, `filter` | the share of each value of `category` |
 | `map` | `source`\*, `lat`\*, `lon`\*, `title`, `label`, `color`, `size`, `view`, `background`, `filter` | one point per row. `label`: the field shown on hover; `size`: 1–40 px; `view`: `map` or `globe` |
+| `section` | `title`, `description`, `divider`, `color` | the heading of a part of the app: a large title, a description under it (Markdown). `divider: true` draws a line above; `color` a colored mark beside the title |
+| `divider` | `label`, `style` | a line between two parts: horizontal in a `column`, vertical in a `row` (place it as `{ sep: auto }` there). `style`: `line` (default), `strong`, `dashed` |
 | `text` | `content`\* | Markdown; `${state.<id>}` is replaced |
 | `agent.chat` | `agent`\* | a chat with an agent **of the app's project**, by slug or id (`res.agent.…`) |
 | `chat` | `model`, `system` | a chat with a model, no agent: a model id and a system prompt |
@@ -236,7 +239,7 @@ The layout is a tree of containers — `row` (elements side by side) and `column
 | `column: { width: 4, rows: [a, b] }` | long form of a `column` with its size — children under `rows` |
 | `[a, b]` | inside a `column` only: a `row` |
 
-A **size** applies along the parent container: it is a `width` inside a `row`, a `height` inside a `column` (the other one is an error). The root has no size. Values: a number above 0 is a **weight** (a share of the remaining space), `<n>px` is fixed, `auto` is the natural size. Defaults: weight 1 in a `row` (a row shares its width equally), `auto` in a `column` (each element takes its natural height: about 280 px for a chart, 380 for a table, 420 for a map, 480 for a chat, its content for a filter, a KPI or a text).
+A **size** applies along the parent container: it is a `width` inside a `row`, a `height` inside a `column` (the other one is an error). The root has no size. Values: a number above 0 is a **weight** (a share of the remaining space), `<n>px` is fixed, `auto` is the natural size. Defaults: weight 1 in a `row` (a row shares its width equally), `auto` in a `column` (each element takes its natural height: about 280 px for a chart, 380 for a table, 420 for a map, 480 for a chat, its content for a filter, a KPI, a section, a divider or a text).
 
 A container is never empty (except the root). **A widget is placed exactly once**; a widget declared but not placed is only a warning, and is not displayed.
 
@@ -298,7 +301,7 @@ Beyond the format, a save checks that each `query` is a single `SELECT` and that
 | a save refused because the application has no declarative definition | the application is rendered by a **template** (an older, hand-coded app): it cannot take a YAML. Create a new application instead |
 | a conflict on save | the slug `metadata.name` is already taken in the project, or someone saved a newer revision |
 
-**Checking the widgets.** Validation does not know the widget types. Before publishing, read each widget of your file against [Widgets](#widgets) and `references/widgets.md`: the `type` is one of the fifteen, every prop belongs to that type, every required prop is there, every field named is a column of its source.
+**Checking the widgets.** Validation does not know the widget types. Before publishing, read each widget of your file against [Widgets](#widgets) and `references/widgets.md`: the `type` is one of the eighteen, every prop belongs to that type, every required prop is there, every field named is a column of its source.
 
 **After a save, check that the data comes back.** For each `query` source, run its statement with `query_dataset`, with the datasets written `<project>.<dataset>` and each `${state.x}` replaced by its default, then by a real value. For a `dataset` source, `SELECT count(*)`. A chart that is empty on screen is usually a query whose `where` meets a `NULL` variable, or a column name that does not exist.
 

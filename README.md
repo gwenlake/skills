@@ -15,7 +15,7 @@ This repository holds the Claude plugin for [Gwenlake Atlas](https://docs.gwenla
 | --- | --- |
 | [`atlas`](./plugins/gwenlake-atlas/skills/atlas) | Finding a resource, choosing between an agent, an ontology and SQL to answer a question, and the order in which a pipeline is built |
 | [`atlas-ontologies`](./plugins/gwenlake-atlas/skills/atlas-ontologies) | Designing an ontology that matches the data of a project: profiling the tables in SQL, the format the platform accepts, object types, links and actions |
-| [`atlas-applications`](./plugins/gwenlake-atlas/skills/atlas-applications) | Building, validating and publishing Atlas applications: the `app.yaml` format, the fifteen widgets, the layout |
+| [`atlas-applications`](./plugins/gwenlake-atlas/skills/atlas-applications) | Building, validating and publishing Atlas applications: the `app.yaml` format, the eighteen widgets, the layout |
 
 The skills run no script and need no API key: everything goes through the MCP server.
 

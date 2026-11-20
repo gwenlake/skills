@@ -5,7 +5,7 @@
   },
   "metadata": {
     "description": "Gwenlake Atlas for Claude: the MCP server and the skills that teach how to use it",
-    "version": "1.0.0"
+    "version": "1.0.1"
   },
   "plugins": [
     {

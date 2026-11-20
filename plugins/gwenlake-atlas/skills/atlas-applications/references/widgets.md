@@ -11,6 +11,7 @@ Every widget type an Atlas application can hold, with what it reads, how it beha
 - [Table](#table)
 - [Charts](#charts): `chart.bar`, `chart.line`, `chart.area`, `chart.pie`
 - [Map](#map)
+- [Sections and dividers](#sections-and-dividers): `section`, `divider`
 - [Text](#text)
 - [Chats](#chats): `agent.chat`, `chat`
 - [Colors and backgrounds](#colors-and-backgrounds)
@@ -214,13 +215,43 @@ widgets:
     props: { source: ports, lat: latitude, lon: longitude, label: nom, color: orange }
 ```
 
+## Sections and dividers
+
+Structure, no data: `section` opens a part of the app with a title, `divider` draws a line between two parts.
+
+| Type | Props | |
+| --- | --- | --- |
+| `section` | `title`, `description`, `divider`, `color` | a large title and, under it, a subtitle or a few lines of description (Markdown, single line breaks kept). `divider: true` draws a line above the title, closing the part before it; `color` (a palette name or a hex color) adds a colored mark beside the title |
+| `divider` | `label`, `style` | a line: horizontal between the elements of a `column`, vertical between those of a `row`. `label` is a short text in the middle of the line; `style` is `line` (default), `strong` or `dashed` |
+
+`title`, `description` and `label` may hold `${state.<id>}`. Neither widget draws a card, so neither accepts `background`.
+
+```yaml
+layout:
+  - ventes
+  - row: [ca, { sep: auto }, volumes]
+
+widgets:
+  ventes:
+    type: section
+    props:
+      title: Ventes
+      description: Chiffre d'affaires et volumes de la région **${state.region}**.
+      divider: true
+      color: blue
+  sep:
+    type: divider
+```
+
+Use a `section` rather than a `text` holding `## Title` to head each part of a dashboard: the title is larger and the description is set apart. In a `row`, size a divider `auto` (`{ sep: auto }`), or it takes an equal share of the width.
+
 ## Text
 
 | Props | |
 | --- | --- |
 | `content`\* | Markdown; `${state.<id>}` is replaced by the variable's value |
 
-Use it for a heading, a short explanation, a legend. Write multi-line content with a YAML block (`content: |`).
+Use it for a short explanation, a legend, a note; for the heading of a part of the app, use a `section`. Write multi-line content with a YAML block (`content: |`).
 
 ## Chats
 
@@ -267,6 +298,8 @@ Each type has a natural height, used when the layout gives it none (`auto`, the 
 | --- | --- | --- |
 | filters | their content (about 60 px; a toggle 32) | 60 (toggle 32) |
 | `kpi` | its content | 76 |
+| `section` | its content | 32 |
+| `divider` | its content | 16 |
 | `text` | its content | 24 |
 | charts | 280 px | 160 |
 | `table` | 380 px | 180 |
@@ -281,7 +314,7 @@ The platform's validation checks the references inside `props` (`source`, `bind`
 
 | Card says | Fix |
 | --- | --- |
-| unknown widget type | the `type` is not one of the fifteen above (`chart.donut`, `kpi.card`, `filter.dropdown` do not exist) |
+| unknown widget type | the `type` is not one of the eighteen listed in `SKILL.md` (`chart.donut`, `kpi.card`, `filter.dropdown` do not exist) |
 | `<prop> is not a prop of this widget` | a prop this type does not accept (`title` on a `kpi`: use `label`; `label` on a chart: use `title`; `value` on a `chart.bar`: use `y`) |
 | `<prop> is required` | a required prop is missing |
 | `must be an aggregate such as sum(field)` | an expression where a plain aggregate is expected |
